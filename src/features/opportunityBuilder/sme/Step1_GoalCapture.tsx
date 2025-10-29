@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, Info, Target, TrendingUp, Globe, Zap, Users, Shield, Brain, Eye } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Target, TrendingUp, Globe, Zap } from 'lucide-react';
 import { Card } from '../../../components/common/Card';
 import { PageHeader } from '../../../components/common/PageHeader';
+import { ChatWindow } from '../../../components/coach/ChatWindow';
 import { useAppStore } from '../../../state/store';
 import { mockApi } from '../../../mocks/api';
 import { COACH_CONFIG } from '../../../state/coach/coachConfig';
-import { coachActions, type CoachState, type CoachStage } from '../../../state/coach/coachMachine';
+import { coachActions, initialCoachState, type CoachState } from '../../../state/coach/coachMachine';
 
 interface Step1_GoalCaptureProps {
   onNext: () => void;
@@ -48,36 +49,6 @@ const ProgressBar: React.FC<{ currentStep: number; totalSteps: number }> = ({ cu
   </div>
 );
 
-const CoachCard: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = "" }) => (
-  <div className={`bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-6 shadow-lg ${className}`}>
-    <div className="flex items-start gap-3">
-      <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 shadow-md">
-        <Brain size={16} className="text-white" />
-      </div>
-      <div className="flex-1">
-        {children}
-      </div>
-    </div>
-  </div>
-);
-
-const ClarifierChip: React.FC<{ 
-  label: string; 
-  isSelected: boolean; 
-  onClick: () => void 
-}> = ({ label, isSelected, onClick }) => (
-  <button
-    onClick={onClick}
-    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-      isSelected 
-        ? 'bg-blue-100 text-blue-700 border-2 border-blue-300 shadow-md' 
-        : 'bg-white text-slate-700 border border-slate-200 hover:bg-blue-50 hover:border-blue-200'
-    }`}
-  >
-    {label}
-  </button>
-);
-
 const CategoryChip: React.FC<{ 
   label: string; 
   icon: React.ElementType; 
@@ -110,7 +81,9 @@ const ClarityMeter: React.FC<{ score: number }> = ({ score }) => (
       />
     </div>
     <p className="text-xs text-slate-500">
-      Clarity {score}/100 – great foundation for accurate matching.
+      {score < 50 ? 'Low clarity — let\'s refine this together' : 
+       score < 80 ? 'Good clarity — almost there' : 
+       'Excellent clarity — ready for matching'}
     </p>
   </div>
 );
@@ -168,7 +141,7 @@ const ReqDocPreview: React.FC<{ data: typeof COACH_CONFIG.reqDocPreview }> = ({ 
               </span>
             </div>
             <button className="p-1 text-slate-400 hover:text-slate-600 transition-colors" title={prediction.reason}>
-              <Info size={14} />
+              <Target size={14} />
             </button>
           </div>
         ))}
@@ -178,10 +151,7 @@ const ReqDocPreview: React.FC<{ data: typeof COACH_CONFIG.reqDocPreview }> = ({ 
 );
 
 export const Step1_GoalCapture: React.FC<Step1_GoalCaptureProps> = ({ onNext, onBack }) => {
-  const [coachState, setCoachState] = useState<CoachState>({
-    stage: "INPUT",
-    input: "I want to increase customers for my business"
-  });
+  const [coachState, setCoachState] = useState<CoachState>(initialCoachState);
 
   const handleDiagnose = () => {
     const domain = detectDomain(coachState.input);
@@ -190,27 +160,27 @@ export const Step1_GoalCapture: React.FC<Step1_GoalCaptureProps> = ({ onNext, on
     }
   };
 
-  const handleChooseClarifier = (clarifierId: string) => {
-    setCoachState(prev => coachActions.chooseClarifier(prev, clarifierId));
-  };
-
-  const handleShowSuggestion = () => {
-    if (coachState.domain) {
-      const template = COACH_CONFIG.suggestionTemplates[coachState.domain];
-      setCoachState(prev => coachActions.showSuggestion(prev, template.text));
+  const handleChatAction = (actionId: string) => {
+    switch (actionId) {
+      case 'acquisition':
+      case 'retention':
+      case 'visibility':
+        const label = getClarifierLabel(coachState.domain!, actionId);
+        setCoachState(prev => coachActions.chooseClarifier(prev, actionId, label));
+        break;
+      case 'apply':
+        const template = COACH_CONFIG.suggestionTemplates[coachState.domain! as keyof typeof COACH_CONFIG.suggestionTemplates];
+        const categories = [...COACH_CONFIG.categoryMap[coachState.domain! as keyof typeof COACH_CONFIG.categoryMap]];
+        setCoachState(prev => coachActions.applySuggestion(prev, template.text, categories));
+        break;
+      case 'back':
+        setCoachState(prev => coachActions.backToClarifiers(prev));
+        break;
     }
-  };
-
-  const handleApplySuggestion = () => {
-    setCoachState(prev => coachActions.applySuggestion(prev));
   };
 
   const handleShowPreview = () => {
     setCoachState(prev => coachActions.showPreview(prev));
-  };
-
-  const handleBackToClarifiers = () => {
-    setCoachState(prev => ({ ...prev, stage: "DIAGNOSED" }));
   };
 
   const handleSubmit = async () => {
@@ -232,210 +202,8 @@ export const Step1_GoalCapture: React.FC<Step1_GoalCaptureProps> = ({ onNext, on
     onNext();
   };
 
-  const renderStage = () => {
-    switch (coachState.stage) {
-      case "INPUT":
-        return (
-          <div className="space-y-6">
-            <div>
-              <label className="text-lg font-semibold text-slate-900 mb-2 block">
-                Describe what you're trying to achieve
-              </label>
-              <div className="relative">
-                <textarea
-                  value={coachState.input}
-                  readOnly
-                  className="goal-textarea w-full p-4 rounded-xl text-slate-900 resize-none"
-                  rows={4}
-                />
-                <div className="character-counter absolute top-2 right-2 text-xs text-slate-400 bg-white px-2 py-1 rounded-full shadow-sm">
-                  {coachState.input.length} characters
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-              <p className="text-sm text-slate-600">
-                Tell us your goal in plain language. We'll help refine it.
-              </p>
-            </div>
-
-            <div className="text-right">
-              <button
-                onClick={handleDiagnose}
-                className="bg-blue-600 text-white font-medium px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 ml-auto"
-              >
-                Diagnose
-                <ArrowRight size={18} />
-              </button>
-            </div>
-          </div>
-        );
-
-      case "DIAGNOSED":
-        return (
-          <div className="space-y-6">
-            <CoachCard>
-              <p className="text-sm text-blue-800 font-medium">
-                It sounds like a marketing or sales growth issue. Which best fits?
-              </p>
-            </CoachCard>
-
-            <div className="space-y-4">
-              <div className="flex flex-wrap gap-3">
-                {COACH_CONFIG.clarifiers.GROWTH.map(clarifier => (
-                  <ClarifierChip
-                    key={clarifier.id}
-                    label={clarifier.label}
-                    isSelected={coachState.clarifierId === clarifier.id}
-                    onClick={() => handleChooseClarifier(clarifier.id)}
-                  />
-                ))}
-              </div>
-
-              {coachState.clarifierId && (
-                <div className="text-right">
-                  <button
-                    onClick={handleShowSuggestion}
-                    className="bg-blue-600 text-white font-medium px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 ml-auto"
-                  >
-                    Next: See Coach Suggestion
-                    <ArrowRight size={18} />
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        );
-
-      case "ELABORATED":
-        return (
-          <div className="space-y-6">
-            <CoachCard>
-              <p className="text-sm text-blue-800 font-medium">
-                Thanks — focusing on {getClarifierLabel(coachState.domain!, coachState.clarifierId!)}.
-              </p>
-            </CoachCard>
-
-            <div className="text-right">
-              <button
-                onClick={handleShowSuggestion}
-                className="bg-blue-600 text-white font-medium px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 ml-auto"
-              >
-                Show Coach Suggestion
-                <ArrowRight size={18} />
-              </button>
-            </div>
-          </div>
-        );
-
-      case "STRUCTURED":
-        const template = COACH_CONFIG.suggestionTemplates[coachState.domain!];
-        return (
-          <div className="space-y-6">
-            <CoachCard>
-              <div className="space-y-4">
-                <p className="text-sm text-blue-800 font-bold">
-                  {template.coachLine}
-                </p>
-                <div className="bg-white rounded-lg p-4 border border-blue-100">
-                  <p className="text-sm text-slate-800 font-medium mb-2">Suggested improvement:</p>
-                  <p className="text-sm text-slate-700 italic">"{template.text}"</p>
-                </div>
-                <p className="text-xs text-slate-600">
-                  {template.rationale}
-                </p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleApplySuggestion}
-                    className="bg-blue-600 text-white font-medium px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-                  >
-                    <Check size={16} />
-                    Apply Suggestion
-                  </button>
-                  <button
-                    onClick={handleBackToClarifiers}
-                    className="bg-slate-100 text-slate-700 font-medium px-4 py-2 rounded-lg hover:bg-slate-200 transition-colors"
-                  >
-                    Back to Clarifiers
-                  </button>
-                </div>
-              </div>
-            </CoachCard>
-          </div>
-        );
-
-      case "APPLIED":
-        return (
-          <div className="space-y-6">
-            <div>
-              <label className="text-lg font-semibold text-slate-900 mb-2 block">
-                Refined Goal
-              </label>
-              <div className="relative">
-                <textarea
-                  value={coachState.input}
-                  readOnly
-                  className="goal-textarea w-full p-4 rounded-xl text-slate-900 resize-none"
-                  rows={4}
-                />
-                <div className="character-counter absolute top-2 right-2 text-xs text-slate-400 bg-white px-2 py-1 rounded-full shadow-sm">
-                  {coachState.input.length} characters
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm font-medium text-slate-700 mb-3">Categories:</p>
-                <div className="flex flex-wrap gap-2">
-                  <CategoryChip label="Growth" icon={TrendingUp} color="green" />
-                  <CategoryChip label="Marketing" icon={Target} color="blue" />
-                  <CategoryChip label="Digital Transformation" icon={Zap} color="purple" />
-                </div>
-              </div>
-
-              <div className="p-4 bg-slate-50 rounded-lg">
-                <ClarityMeter score={82} />
-              </div>
-            </div>
-
-            <div className="text-right">
-              <button
-                onClick={handleShowPreview}
-                className="bg-blue-600 text-white font-medium px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 ml-auto"
-              >
-                Preview Structured Fields
-                <ArrowRight size={18} />
-              </button>
-            </div>
-          </div>
-        );
-
-      case "PREVIEW_READY":
-        return (
-          <div className="space-y-6">
-            <ReqDocPreview data={COACH_CONFIG.reqDocPreview} />
-            
-            <div className="text-right">
-              <button
-                onClick={handleSubmit}
-                className="bg-blue-600 text-white font-medium px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 ml-auto"
-              >
-                Continue → SmartAI Recommends
-                <ArrowRight size={18} />
-              </button>
-            </div>
-          </div>
-        );
-
-      default:
-        return null;
-    }
-  };
-
   return (
-    <div className="max-w-4xl mx-auto animate-fade-in">
+    <div className="max-w-6xl mx-auto animate-fade-in">
       <button 
         onClick={onBack} 
         className="flex items-center gap-2 mb-6 text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline transition-colors"
@@ -450,9 +218,140 @@ export const Step1_GoalCapture: React.FC<Step1_GoalCaptureProps> = ({ onNext, on
 
       <ProgressBar currentStep={1} totalSteps={3} />
 
-      <Card className="space-y-6">
-        {renderStage()}
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Content Area */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Textbox - Always visible at top */}
+          <Card>
+            <div className="space-y-4">
+              <div>
+                <label className="text-lg font-semibold text-slate-900 mb-2 block">
+                  Describe what you're trying to achieve
+                </label>
+                <div className="relative">
+                  <textarea
+                    value={coachState.input}
+                    readOnly
+                    className="goal-textarea w-full p-4 rounded-xl text-slate-900 resize-none"
+                    rows={4}
+                  />
+                  <div className="character-counter absolute top-2 right-2 text-xs text-slate-400 bg-white px-2 py-1 rounded-full shadow-sm">
+                    {coachState.input.length} characters
+                  </div>
+                </div>
+              </div>
+
+              {coachState.stage === "INPUT" && (
+                <div className="text-right">
+                  <button
+                    onClick={handleDiagnose}
+                    className="bg-blue-600 text-white font-medium px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 ml-auto"
+                  >
+                    Diagnose
+                    <ArrowRight size={18} />
+                  </button>
+                </div>
+              )}
+
+              {coachState.stage === "INPUT" && (
+                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                  <p className="text-sm text-slate-600">
+                    Tell us your goal in plain language. We'll help refine it.
+                  </p>
+                </div>
+              )}
+            </div>
+          </Card>
+
+          {/* Chat Window - Appears after Diagnose */}
+          {coachState.stage !== "INPUT" && (
+            <Card>
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">AI Coach</h3>
+              <ChatWindow 
+                messages={coachState.messages} 
+                onAction={handleChatAction}
+              />
+            </Card>
+          )}
+
+          {/* Preview Section - Shows when applied */}
+          {coachState.stage === "PREVIEW_READY" && (
+            <ReqDocPreview data={COACH_CONFIG.reqDocPreview} />
+          )}
+        </div>
+
+        {/* Sidebar - Categories and Clarity */}
+        <div className="space-y-6">
+          {/* Identified Categories */}
+          {coachState.categories.length > 0 && (
+            <Card>
+              <h4 className="font-semibold text-slate-900 mb-3">Identified Categories</h4>
+              <div className="flex flex-wrap gap-2">
+                {coachState.categories.map((category, index) => {
+                  const iconMap = {
+                    'Growth': TrendingUp,
+                    'Marketing': Target,
+                    'Digital Transformation': Zap
+                  };
+                  const colorMap = {
+                    'Growth': 'green',
+                    'Marketing': 'blue',
+                    'Digital Transformation': 'purple'
+                  };
+                  const Icon = iconMap[category as keyof typeof iconMap] || Target;
+                  const color = colorMap[category as keyof typeof colorMap] || 'blue';
+                  
+                  return (
+                    <CategoryChip
+                      key={index}
+                      label={category}
+                      icon={Icon}
+                      color={color}
+                    />
+                  );
+                })}
+              </div>
+            </Card>
+          )}
+
+          {/* Clarity Score */}
+          <Card>
+            <h4 className="font-semibold text-slate-900 mb-3">Clarity Score</h4>
+            <ClarityMeter score={coachState.clarity} />
+          </Card>
+        </div>
+      </div>
+
+      {/* Footer Actions */}
+      <div className="mt-8 flex justify-between">
+        <button
+          onClick={onBack}
+          className="px-6 py-2 text-slate-600 hover:text-slate-800 transition-colors"
+        >
+          Cancel
+        </button>
+        
+        <div className="flex gap-3">
+          {coachState.stage === "APPLIED" && (
+            <button
+              onClick={handleShowPreview}
+              className="bg-slate-100 text-slate-700 font-medium px-6 py-3 rounded-lg hover:bg-slate-200 transition-colors"
+            >
+              Preview Structured Fields
+            </button>
+          )}
+          
+          {coachState.stage === "PREVIEW_READY" && (
+            <button
+              onClick={handleSubmit}
+              className="bg-blue-600 text-white font-medium px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+            >
+              Continue → SmartAI Recommends
+              <ArrowRight size={18} />
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
