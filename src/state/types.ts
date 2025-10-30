@@ -30,9 +30,13 @@ export interface TRHLSOption {
   businessImpact: { 
     revenueLiftPct?: number; 
     costSavePct?: number; 
-    opsSpeedupPct?: number; 
+    opsSpeedupPct?: number;
+    leadDeltaPerMonth?: number;
+    cacChangePct?: number;
+    timeToFirstLeadWeeks?: number;
   };
   grantWhy?: string;            // "Pre-approved under PSG …"
+  rationaleSignals?: string[];  // AI reasoning signals
 }
 
 export interface ReqDoc {

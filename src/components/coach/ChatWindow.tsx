@@ -1,13 +1,51 @@
-import React from 'react';
-import { Brain, User, CheckCircle } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Brain, User, CheckCircle, Sparkles } from 'lucide-react';
 import { ChatMessage } from '../../state/coach/types';
 
 interface ChatWindowProps {
   messages: ChatMessage[];
   onAction: (actionId: string) => void;
+  isTyping?: boolean;
 }
 
-const MessageBubble: React.FC<{ message: ChatMessage; onAction: (actionId: string) => void }> = ({ message, onAction }) => {
+const TypingDots: React.FC<{ visible: boolean }> = ({ visible }) => {
+  if (!visible) return null;
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      className="flex items-center gap-2 text-sm text-slate-500 py-2"
+    >
+      <div className="flex gap-1">
+        <motion.div
+          className="w-2 h-2 bg-blue-400 rounded-full"
+          animate={{ scale: [1, 1.2, 1] }}
+          transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
+        />
+        <motion.div
+          className="w-2 h-2 bg-blue-400 rounded-full"
+          animate={{ scale: [1, 1.2, 1] }}
+          transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }}
+        />
+        <motion.div
+          className="w-2 h-2 bg-blue-400 rounded-full"
+          animate={{ scale: [1, 1.2, 1] }}
+          transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }}
+        />
+      </div>
+      <span>AI Coach is typing...</span>
+    </motion.div>
+  );
+};
+
+const MessageBubble: React.FC<{ 
+  message: ChatMessage; 
+  onAction: (actionId: string) => void;
+  index: number;
+}> = ({ message, onAction, index }) => {
   const getRoleIcon = (role: string) => {
     switch (role) {
       case 'AI':
@@ -24,11 +62,11 @@ const MessageBubble: React.FC<{ message: ChatMessage; onAction: (actionId: strin
   const getBubbleStyles = (role: string) => {
     switch (role) {
       case 'AI':
-        return 'bg-blue-50 border-blue-200 text-slate-800';
+        return 'bg-gradient-to-br from-[#F0F6FF] to-[#F9FBFF] border-[#E0E8F8] text-gray-700';
       case 'SME':
-        return 'bg-slate-100 border-slate-200 text-slate-800 ml-auto';
+        return 'bg-white border-gray-200 text-gray-900';
       case 'SYSTEM':
-        return 'bg-emerald-50 border-emerald-200 text-emerald-800 text-center';
+        return 'bg-[#F9FAFB] text-gray-500 text-sm italic border-0';
       default:
         return 'bg-slate-50 border-slate-200 text-slate-800';
     }
@@ -48,11 +86,28 @@ const MessageBubble: React.FC<{ message: ChatMessage; onAction: (actionId: strin
   };
 
   return (
-    <div className={`flex ${getContainerStyles(message.role)} mb-4`}>
-      <div className={`max-w-[80%] rounded-xl border p-4 shadow-sm ${getBubbleStyles(message.role)}`}>
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95, y: 10 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      transition={{ 
+        duration: 0.25, 
+        delay: index * 0.1,
+        ease: "easeOut"
+      }}
+      className={`flex ${getContainerStyles(message.role)} mb-4`}
+    >
+      <motion.div 
+        className={`max-w-[80%] rounded-2xl border p-4 shadow-sm ${getBubbleStyles(message.role)}`}
+        whileHover={{ scale: 1.02 }}
+        transition={{ duration: 0.2 }}
+      >
         <div className="flex items-start gap-2 mb-2">
           {getRoleIcon(message.role)}
-          <span className="text-xs font-medium uppercase tracking-wide">
+          <span className={`text-xs font-medium uppercase tracking-wide ${
+            message.role === 'AI' ? 'text-blue-700' : 
+            message.role === 'SME' ? 'text-gray-700' : 
+            'text-gray-500'
+          }`}>
             {message.role === 'SME' ? 'You' : message.role === 'AI' ? 'AI Coach' : 'System'}
           </span>
         </div>
@@ -62,42 +117,85 @@ const MessageBubble: React.FC<{ message: ChatMessage; onAction: (actionId: strin
         </div>
         
         {message.actions && message.actions.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2">
+          <motion.div 
+            className="mt-3 flex flex-wrap gap-2"
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
             {message.actions.map((action) => (
-              <button
+              <motion.button
                 key={action.id}
                 onClick={() => onAction(action.id)}
-                className="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-colors"
+                className="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-all duration-200"
+                whileHover={{ scale: 1.05, boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}
+                whileTap={{ scale: 0.98 }}
               >
                 {action.label}
-              </button>
+              </motion.button>
             ))}
-          </div>
+          </motion.div>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 
-export const ChatWindow: React.FC<ChatWindowProps> = ({ messages, onAction }) => {
+export const ChatWindow: React.FC<ChatWindowProps> = ({ messages, onAction, isTyping = false }) => {
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isTyping]);
+
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm max-h-96 overflow-y-auto">
-      <div className="space-y-4">
-        {messages.length === 0 ? (
-          <div className="text-center text-slate-500 py-8">
-            <Brain size={32} className="mx-auto mb-2 text-slate-400" />
-            <p className="text-sm">AI Coach is ready to help refine your goal</p>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      className="bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden"
+    >
+      {/* Sticky Header */}
+      <div className="sticky top-0 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-slate-200 px-6 py-4">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
+            <Brain size={16} className="text-white" />
           </div>
-        ) : (
-          messages.map((message) => (
-            <MessageBubble
-              key={message.id}
-              message={message}
-              onAction={onAction}
-            />
-          ))
-        )}
+          <h3 className="font-semibold text-slate-900">AI Coach</h3>
+          <Sparkles size={16} className="text-blue-500" />
+        </div>
       </div>
-    </div>
+
+      {/* Chat Content */}
+      <div className="max-h-[420px] overflow-y-auto px-6 py-4">
+        <div className="space-y-4">
+          {messages.length === 0 ? (
+            <motion.div 
+              className="text-center text-slate-500 py-8"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+            >
+              <Brain size={32} className="mx-auto mb-2 text-slate-400" />
+              <p className="text-sm">AI Coach is ready to help refine your goal</p>
+            </motion.div>
+          ) : (
+            <AnimatePresence>
+              {messages.map((message, index) => (
+                <MessageBubble
+                  key={message.id}
+                  message={message}
+                  onAction={onAction}
+                  index={index}
+                />
+              ))}
+            </AnimatePresence>
+          )}
+          
+          <TypingDots visible={isTyping} />
+          <div ref={chatEndRef} />
+        </div>
+      </div>
+    </motion.div>
   );
 };

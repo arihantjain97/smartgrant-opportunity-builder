@@ -11,7 +11,8 @@ import { Step1_GoalCapture } from '../../features/opportunityBuilder/sme/Step1_G
 import { Step2_TRHLS } from '../../features/opportunityBuilder/sme/Step2_TRHLS';
 import { Step3_PrivacyAndConsent } from '../../features/opportunityBuilder/sme/Step3_PrivacyAndConsent';
 import { Step4_MatchingMode } from '../../features/opportunityBuilder/sme/Step4_MatchingMode';
-import { Step5_PreviewAndDispatch } from '../../features/opportunityBuilder/sme/Step5_PreviewAndDispatch';
+import { Step5_PreviewDispatch } from '../../features/opportunityBuilder/sme/Step5_PreviewDispatch';
+import { Step6_LiveMatchingDashboard } from '../../features/opportunityBuilder/sme/Step6_LiveMatchingDashboard';
 import { ComparisonView } from '../../features/opportunityBuilder/comparison/ComparisonView';
 
 const AppRouter: React.FC = () => {
@@ -45,7 +46,9 @@ const AppRouter: React.FC = () => {
       case 4:
         return <Step4_MatchingMode onNext={handleNextStep} onBack={handleBackStep} />;
       case 5:
-        return <Step5_PreviewAndDispatch onNext={handleFinish} onBack={handleBackStep} />;
+        return <Step5_PreviewDispatch onNext={handleNextStep} onBack={handleBackStep} />;
+      case 6:
+        return <Step6_LiveMatchingDashboard onBack={handleBackStep} />;
       default:
         return <Step1_GoalCapture onNext={handleNextStep} onBack={handleFinish} />;
     }
