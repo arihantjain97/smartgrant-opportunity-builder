@@ -29,7 +29,17 @@ export const MOCK_LEAD_RESPONSES: LeadResponse[] = [
         'Custom configuration setup',
         'User training program',
         'Go-live support'
-      ]
+      ],
+      grantTag: 'PSG',
+      tags: ['Budget Fit', 'Fast Deployment'],
+      breakdown: [
+        { item: 'ERP Software Licence', costBand: [9000, 11000] },
+        { item: 'Onboarding & Setup', costBand: [6000, 8000] },
+        { item: '6-Month Support', costBand: [3000, 4000] }
+      ],
+      grantEligible: true,
+      support: 'Includes 6-month support and on-site training.',
+      addOns: ['Data migration', 'API integration']
     }
   },
   {
@@ -70,6 +80,26 @@ export const MOCK_LEAD_RESPONSES: LeadResponse[] = [
         'Grant application review',
         'Documentation preparation',
         'Submission support'
+      ],
+      grantTag: 'EDG',
+      tags: ['High Success Rate', 'Fast Turnaround'],
+      understanding: 'You aim to improve online visibility and streamline campaign reporting across channels.',
+      approachPhases: [
+        { label: 'Diagnostic', weeks: '1–2 wks', icon: 'Search' },
+        { label: 'Implementation', weeks: '4–6 wks', icon: 'Settings' },
+        { label: 'Reporting & Claims', weeks: '2 wks', icon: 'FileCheck2' }
+      ],
+      team: [
+        { name: 'Alice Carter', role: 'Lead Consultant' },
+        { name: 'Ben Lee', role: 'Senior Analyst' }
+      ],
+      similarProjects: [
+        { sector: 'F&B Retailer', result: '30% faster EDG approval' },
+        { sector: 'Services SME', result: 'Improved claims documentation quality' }
+      ],
+      assumptions: [
+        'Assumes vendor stack provides campaign analytics API',
+        'Assumes SME can provide last 6 months of campaign data'
       ]
     }
   },

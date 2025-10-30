@@ -18,6 +18,18 @@ export interface LeadResponse {
     timeline: [number, number];
     keyFeatures: string[];
     nextSteps: string[];
+    // New optional, structured fields for the 1-Page Confidence Snapshot
+    grantTag?: 'PSG' | 'EDG' | 'NON_GRANT';
+    tags?: string[]; // e.g., High Success Rate, Fast Turnaround
+    understanding?: string; // consultant: paraphrase of SME goal
+    approachPhases?: { label: string; weeks: string; icon?: string }[]; // consultant phases
+    team?: { name: string; role: string; avatarUrl?: string }[]; // consultant team
+    similarProjects?: { sector: string; result: string }[]; // consultant social proof
+    assumptions?: string[]; // dependencies/assumptions list
+    breakdown?: { item: string; costBand?: [number, number] }[]; // vendor items
+    grantEligible?: boolean; // vendor grant applicability
+    support?: string; // vendor support/warranty
+    addOns?: string[]; // vendor optional add-ons
   };
 }
 
