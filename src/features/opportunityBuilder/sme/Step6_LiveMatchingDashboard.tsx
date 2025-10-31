@@ -13,6 +13,10 @@ import { LiveResponseCard } from '../../../components/matching/LiveResponseCard'
 import { IndicativeSubmissionModal } from '../../../components/matching/IndicativeSubmissionModal';
 import { useMatchingStore } from '../../../state/matching/store';
 import { LeadResponse } from '../../../state/matching/types';
+import { Step6CompareDrawer } from './CompareDrawer';
+import { Card } from '../../../components/common/Card';
+import { toast } from 'react-hot-toast'; // If you use a toast lib
+import { useMemo } from 'react';
 
 interface Step6_LiveMatchingDashboardProps {
   onBack: () => void;
@@ -114,7 +118,10 @@ const LiveSyncIndicator: React.FC<{ isRefreshing: boolean }> = ({ isRefreshing }
 const ResponseFeed: React.FC<{
   responses: LeadResponse[];
   onViewSubmission: (response: LeadResponse) => void;
-}> = ({ responses, onViewSubmission }) => {
+  onCompareSelect: (response: LeadResponse) => void;
+  compareSelectedIds: string[];
+  compareLimitReached: boolean;
+}> = ({ responses, onViewSubmission, onCompareSelect, compareSelectedIds, compareLimitReached }) => {
   // Only show accepted and pending responses
   const activeResponses = responses.filter(r => r.status === 'ACCEPTED' || r.status === 'PENDING');
   
@@ -150,6 +157,9 @@ const ResponseFeed: React.FC<{
           <LiveResponseCard
             response={response}
             onViewSubmission={onViewSubmission}
+            onCompareSelect={onCompareSelect}
+            isCompareSelected={compareSelectedIds.includes(response.id)}
+            isCompareDisabled={compareLimitReached && !compareSelectedIds.includes(response.id)}
           />
         </motion.div>
       ))}
@@ -208,6 +218,30 @@ export const Step6_LiveMatchingDashboard: React.FC<Step6_LiveMatchingDashboardPr
   } = useMatchingStore();
 
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedResponses, setSelectedResponses] = useState<LeadResponse[]>([]);
+  const [isCompareDrawerOpen, setIsCompareDrawerOpen] = useState(false);
+  const MAX_COMPARE = 2;
+
+  // Handler to toggle selection
+  const handleToggleCompareSelect = (response: LeadResponse) => {
+    const isSelected = selectedResponses.some(r => r.id === response.id);
+    if (isSelected) {
+      setSelectedResponses(prev => prev.filter(r => r.id !== response.id));
+    } else if (selectedResponses.length < MAX_COMPARE) {
+      setSelectedResponses(prev => [...prev, response]);
+    } else {
+      toast && toast('Compare 2 at a time for clarity.', { icon: '⚡️' });
+    }
+  };
+  // Clear selected
+  const handleClearCompare = () => setSelectedResponses([]);
+  // Open compare drawer
+  const handleOpenCompare = () => setIsCompareDrawerOpen(true);
+  const handleCloseCompare = () => setIsCompareDrawerOpen(false);
+
+  // Helpers for disable logic
+  const compareLimitReached = selectedResponses.length >= MAX_COMPARE;
+  const compareBarVisible = selectedResponses.length > 0;
 
   const handleViewSubmission = (response: LeadResponse) => {
     setSelectedResponse(response);
@@ -283,8 +317,62 @@ export const Step6_LiveMatchingDashboard: React.FC<Step6_LiveMatchingDashboardPr
         <ResponseFeed
           responses={responses}
           onViewSubmission={handleViewSubmission}
+          onCompareSelect={handleToggleCompareSelect}
+          compareSelectedIds={selectedResponses.map(r => r.id)}
+          compareLimitReached={compareLimitReached}
         />
       </div>
+
+      {/* Floating Compare Bar */}
+      {compareBarVisible && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
+          className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-30"
+        >
+          <Card className="bg-white shadow-xl border border-slate-200 px-6 py-4 animate-fadeUp">
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                  <span className="text-sm font-bold text-blue-600">{selectedResponses.length}</span>
+                </div>
+                <span className="text-sm font-medium text-slate-700">
+                  Compare selected response{selectedResponses.length > 1 ? 's' : ''}
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleOpenCompare}
+                  className="bg-blue-600 text-white font-medium px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                  disabled={selectedResponses.length < 1}
+                >
+                  Compare
+                </button>
+                <button
+                  onClick={handleClearCompare}
+                  className="bg-slate-100 text-slate-700 font-medium px-4 py-2 rounded-lg hover:bg-slate-200 transition-colors text-sm"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Compare Drawer/Modal */}
+      <Step6CompareDrawer
+        isOpen={isCompareDrawerOpen}
+        onClose={handleCloseCompare}
+        selected={selectedResponses}
+        onProceed={() => {
+          // Optionally mark as "Ready for clarification"
+          setIsCompareDrawerOpen(false);
+          handleClearCompare();
+          toast && toast.success('Marked ready for clarification!');
+        }}
+      />
 
       {/* Indicative Submission Modal */}
       <IndicativeSubmissionModal

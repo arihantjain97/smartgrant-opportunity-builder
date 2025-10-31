@@ -19,6 +19,15 @@ Directory Structure:
     │   │   ├── PeekNextStep.tsx
     │   │   ├── Pipeline.tsx
     │   │   └── StatusBadge.tsx
+    │   ├── matching/
+    │   │   ├── IndicativeSubmissionModal.tsx
+    │   │   ├── LiveResponseCard.tsx
+    │   │   ├── StatsOverview.tsx
+    │   │   └── StatusCard.tsx
+    │   ├── preview/
+    │   │   ├── ConsultantCard.tsx
+    │   │   ├── DispatchSummary.tsx
+    │   │   └── VendorCard.tsx
     │   └── ui/
     ├── features/
     │   ├── dashboard/
@@ -40,11 +49,15 @@ Directory Structure:
     │           ├── Step2_TRHLS.tsx
     │           ├── Step3_PrivacyAndConsent.tsx
     │           ├── Step4_MatchingMode.tsx
-    │           └── Step5_PreviewAndDispatch.tsx
+    │           ├── Step5_PreviewAndDispatch.tsx
+    │           ├── Step5_PreviewDispatch.tsx
+    │           └── Step6_LiveMatchingDashboard.tsx
     ├── lib/
     │   └── utils.ts
     ├── mocks/
     │   ├── api.ts
+    │   ├── matching.seeds.ts
+    │   ├── preview.seeds.ts
     │   ├── seeds.trhls.ts
     │   └── seeds.ts
     ├── state/
@@ -52,8 +65,16 @@ Directory Structure:
     │   │   ├── coachConfig.ts
     │   │   ├── coachMachine.ts
     │   │   └── types.ts
+    │   ├── matching/
+    │   │   ├── modes.ts
+    │   │   ├── recommendation.ts
+    │   │   ├── store.ts
+    │   │   └── types.ts
     │   ├── opportunity/
     │   │   └── uiHints.ts
+    │   ├── preview/
+    │   │   ├── store.ts
+    │   │   └── types.ts
     │   ├── trhls/
     │   │   ├── impact.ts
     │   │   └── store.ts
@@ -94,7 +115,8 @@ import { Step1_GoalCapture } from '../../features/opportunityBuilder/sme/Step1_G
 import { Step2_TRHLS } from '../../features/opportunityBuilder/sme/Step2_TRHLS';
 import { Step3_PrivacyAndConsent } from '../../features/opportunityBuilder/sme/Step3_PrivacyAndConsent';
 import { Step4_MatchingMode } from '../../features/opportunityBuilder/sme/Step4_MatchingMode';
-import { Step5_PreviewAndDispatch } from '../../features/opportunityBuilder/sme/Step5_PreviewAndDispatch';
+import { Step5_PreviewDispatch } from '../../features/opportunityBuilder/sme/Step5_PreviewDispatch';
+import { Step6_LiveMatchingDashboard } from '../../features/opportunityBuilder/sme/Step6_LiveMatchingDashboard';
 import { ComparisonView } from '../../features/opportunityBuilder/comparison/ComparisonView';
 
 const AppRouter: React.FC = () => {
@@ -128,7 +150,9 @@ const AppRouter: React.FC = () => {
       case 4:
         return <Step4_MatchingMode onNext={handleNextStep} onBack={handleBackStep} />;
       case 5:
-        return <Step5_PreviewAndDispatch onNext={handleFinish} onBack={handleBackStep} />;
+        return <Step5_PreviewDispatch onNext={handleNextStep} onBack={handleBackStep} />;
+      case 6:
+        return <Step6_LiveMatchingDashboard onBack={handleBackStep} />;
       default:
         return <Step1_GoalCapture onNext={handleNextStep} onBack={handleFinish} />;
     }
@@ -717,94 +741,87 @@ File: components/common/ModeCard.tsx
 [ModeCard.tsx: start]
 import React from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle, User, Users, Clock, TrendingUp } from 'lucide-react';
+import { 
+  UserCheck, 
+  ListChecks,
+  FileCheck2,
+  Hand, 
+  Send,
+  Users,
+  UsersRound,
+  ClipboardCheck,
+  Layers,
+  Store,
+  Inbox,
+  Heart,
+  CheckCircle
+} from 'lucide-react';
+import { Card } from './Card';
+import { MATCHING_MODES } from '../../state/matching/modes';
 
 interface ModeCardProps {
-  mode: 'CONSULTANT_MANAGED' | 'SME_SELF_MANAGED';
+  mode: keyof typeof MATCHING_MODES;
   isSelected: boolean;
-  isRecommended: boolean;
   onSelect: () => void;
-  copy: {
-    value: string;
-    youHandle: readonly string[];
-    weHandle: readonly string[];
-    badges: readonly string[];
-    effort: string;
-    grantAlignment: number;
-    timeToFirstQuote: string;
-    footnote: string;
-  };
+  isMobile?: boolean;
 }
 
-const EffortMeter: React.FC<{ 
-  effort: string; 
-  grantAlignment: number; 
-  timeToFirstQuote: string;
-}> = ({ effort, grantAlignment, timeToFirstQuote }) => {
-  const getEffortColor = (effort: string) => {
-    switch (effort.toLowerCase()) {
-      case 'low': return 'text-emerald-600 bg-emerald-50 border-emerald-200';
-      case 'medium': return 'text-amber-600 bg-amber-50 border-amber-200';
-      case 'high': return 'text-red-600 bg-red-50 border-red-200';
-      default: return 'text-slate-600 bg-slate-50 border-slate-200';
-    }
+const iconMap = {
+  UserCheck,
+  ListChecks,
+  FileCheck2,
+  Hand,
+  Send,
+  Users,
+  UsersRound,
+  ClipboardCheck,
+  Layers,
+  Store,
+  Inbox,
+  Heart
+};
+
+const getIcon = (iconName: string) => {
+  const IconComponent = iconMap[iconName as keyof typeof iconMap];
+  return IconComponent || UserCheck;
+};
+
+const Badge: React.FC<{ 
+  children: React.ReactNode; 
+  variant?: 'default' | 'secondary' | 'outline';
+  className?: string;
+}> = ({ children, variant = 'default', className = "" }) => {
+  const baseClasses = "px-2 py-1 rounded-full text-xs font-medium";
+  const variantClasses = {
+    default: "bg-indigo-100 text-indigo-700",
+    secondary: "bg-slate-100 text-slate-700",
+    outline: "bg-emerald-50 text-emerald-700 border border-emerald-200"
   };
-
+  
   return (
-    <div className="space-y-3">
-      {/* Effort Tag */}
-      <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getEffortColor(effort)}`}>
-        <User size={12} />
-        Your effort: {effort}
-      </div>
-
-      {/* Grant Alignment Meter */}
-      <div className="space-y-1">
-        <div className="flex justify-between items-center">
-          <span className="text-xs font-medium text-slate-600">Grant alignment</span>
-          <span className="text-xs text-slate-500">{Math.round(grantAlignment * 100)}%</span>
-        </div>
-        <div className="w-full bg-slate-200 rounded-full h-2">
-          <motion.div
-            className="bg-indigo-500 h-2 rounded-full"
-            initial={{ width: 0 }}
-            animate={{ width: `${grantAlignment * 100}%` }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-          />
-        </div>
-      </div>
-
-      {/* Time Tag */}
-      <div className="flex items-center gap-1 text-xs text-slate-600">
-        <Clock size={12} />
-        Time to first quote: {timeToFirstQuote}
-      </div>
-    </div>
+    <span className={`${baseClasses} ${variantClasses[variant]} ${className}`}>
+      {children}
+    </span>
   );
 };
 
 export const ModeCard: React.FC<ModeCardProps> = ({ 
   mode, 
   isSelected, 
-  isRecommended, 
   onSelect, 
-  copy 
+  isMobile = false 
 }) => {
-  const isConsultant = mode === 'CONSULTANT_MANAGED';
-
+  const modeData = MATCHING_MODES[mode];
+  
   return (
     <motion.div
-      whileHover={{ y: -2 }}
+      whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
       whileTap={{ scale: 0.98 }}
       onClick={onSelect}
-      className={`relative cursor-pointer transition-all duration-200 ${
-        isSelected 
-          ? 'ring-2 ring-indigo-500 shadow-md' 
-          : 'hover:shadow-md'
-      }`}
+      className="cursor-pointer"
     >
-      <div className={`rounded-2xl border border-slate-200 shadow-sm p-6 h-full ${
-        isSelected ? 'bg-indigo-50' : 'bg-white'
+      <Card className={`p-6 rounded-2xl border shadow-sm hover:shadow-md transition-all ${
+        isSelected ? 'ring-2 ring-indigo-500 bg-indigo-50/30' : 'bg-white'
       }`}>
         {/* Selection Badge */}
         {isSelected && (
@@ -818,96 +835,102 @@ export const ModeCard: React.FC<ModeCardProps> = ({
         )}
 
         {/* Header */}
-        <div className="mb-4">
-          <div className="flex items-start justify-between mb-2">
-            <h3 className="font-semibold text-slate-900 text-lg">
-              {isConsultant ? 'Consultant-Managed' : 'SME Self-Managed'}
-            </h3>
-            {isRecommended && (
-              <span className="px-2 py-1 bg-emerald-50 text-emerald-700 text-xs font-medium rounded-full border border-emerald-200">
-                Recommended
-              </span>
-            )}
-          </div>
-          <p className="text-sm text-slate-600 mb-3">{copy.value}</p>
+        <div className="flex justify-between items-start mb-2">
+          <h3 className="font-semibold text-slate-900 text-lg">{modeData.title}</h3>
+          {modeData.recommended && (
+            <Badge variant="outline">Recommended</Badge>
+          )}
         </div>
 
-        {/* Badges */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          {copy.badges.map((badge, index) => (
-            <motion.span
-              key={badge}
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: index * 0.1 }}
-              className="px-2 py-1 bg-slate-50 text-slate-700 text-xs font-medium rounded-full border border-slate-200"
-            >
-              {badge}
-            </motion.span>
+        {/* Tags */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          {modeData.badges.map((badge: string) => (
+            <Badge key={badge} variant="secondary">{badge}</Badge>
           ))}
         </div>
 
-        {/* Responsibilities */}
-        <div className="space-y-4 mb-4">
-          {/* You Handle */}
-          <div>
-            <h4 className="text-xs font-medium text-slate-700 mb-2 flex items-center gap-1">
-              <User size={12} />
-              You handle
-            </h4>
-            <ul className="space-y-1">
-              {copy.youHandle.map((item, index) => (
-                <motion.li
-                  key={item}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.1 + index * 0.05 }}
-                  className="text-xs text-slate-600 flex items-center gap-2"
+        {/* Flow Row - Iconic */}
+        <div className="mb-6">
+          <div className="flex justify-between">
+            {modeData.roles.map((role: any, index: number) => {
+              const Icon = getIcon(role.icon);
+              return (
+                <motion.div
+                  key={role.label}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="flex flex-col items-center flex-1"
                 >
-                  <div className="w-1 h-1 bg-slate-400 rounded-full" />
-                  {item}
-                </motion.li>
-              ))}
-            </ul>
-          </div>
-
-          {/* We Handle */}
-          <div>
-            <h4 className="text-xs font-medium text-slate-700 mb-2 flex items-center gap-1">
-              <Users size={12} />
-              SmartGrant {isConsultant ? '+ Consultant' : ''} handle
-            </h4>
-            <ul className="space-y-1">
-              {copy.weHandle.map((item, index) => (
-                <motion.li
-                  key={item}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.2 + index * 0.05 }}
-                  className="text-xs text-slate-600 flex items-center gap-2"
-                >
-                  <div className="w-1 h-1 bg-slate-400 rounded-full" />
-                  {item}
-                </motion.li>
-              ))}
-            </ul>
+                  <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center mb-2">
+                    <Icon size={18} className="text-indigo-600" />
+                  </div>
+                  <span className="text-xs text-slate-600 text-center leading-tight">
+                    {role.label}
+                  </span>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
 
-        {/* Metrics */}
-        <div className="pt-4 border-t border-slate-200">
-          <EffortMeter
-            effort={copy.effort}
-            grantAlignment={copy.grantAlignment}
-            timeToFirstQuote={copy.timeToFirstQuote}
-          />
+        {/* Outcome Strip */}
+        <div className="py-3 border-t border-slate-200 mb-4">
+          <p className="text-sm text-slate-600 text-center">{modeData.outcome}</p>
         </div>
 
-        {/* Footnote */}
-        <div className="mt-4 pt-3 border-t border-slate-200">
-          <p className="text-xs text-slate-500">{copy.footnote}</p>
+        {/* Preview Next Step - Inline Timeline */}
+        <div className="bg-slate-50 rounded-lg p-4">
+          <p className="text-xs font-medium text-slate-500 mb-3 text-center">Preview next step</p>
+          {isMobile ? (
+            // Mobile: Horizontal scroll
+            <div className="flex gap-4 overflow-x-auto pb-2">
+              {modeData.timeline.map((step: any, index: number) => {
+                const Icon = getIcon(step.icon);
+                return (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.2 + index * 0.1 }}
+                    className="flex flex-col items-center flex-shrink-0 min-w-[80px]"
+                  >
+                    <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center mb-2 shadow-sm">
+                      <Icon size={14} className="text-indigo-600" />
+                    </div>
+                    <span className="text-[10px] text-center text-slate-600 leading-tight">
+                      {step.step}
+                    </span>
+                  </motion.div>
+                );
+              })}
+            </div>
+          ) : (
+            // Desktop: Full timeline
+            <div className="flex justify-between">
+              {modeData.timeline.map((step: any, index: number) => {
+                const Icon = getIcon(step.icon);
+                return (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 + index * 0.1 }}
+                    className="flex flex-col items-center flex-1"
+                  >
+                    <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center mb-2 shadow-sm">
+                      <Icon size={14} className="text-indigo-600" />
+                    </div>
+                    <span className="text-[10px] text-center text-slate-600 leading-tight">
+                      {step.step}
+                    </span>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
         </div>
-      </div>
+      </Card>
     </motion.div>
   );
 };
@@ -1262,6 +1285,1496 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, type = 'applic
   );
 };
 [StatusBadge.tsx: end]
+
+File: components/matching/IndicativeSubmissionModal.tsx
+[IndicativeSubmissionModal.tsx: start]
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  X, 
+  DollarSign, 
+  Calendar, 
+  CheckCircle, 
+  ArrowRight,
+  Star,
+  Clock,
+  User,
+  Building2,
+  BadgePercent,
+  FileCheck2,
+  Settings,
+  Search
+} from 'lucide-react';
+import { LeadResponse } from '../../state/matching/types';
+
+interface IndicativeSubmissionModalProps {
+  response: LeadResponse | null;
+  onClose: () => void;
+}
+
+export const IndicativeSubmissionModal: React.FC<IndicativeSubmissionModalProps> = ({ 
+  response, 
+  onClose 
+}) => {
+  if (!response || !response.indicativeSubmission) return null;
+
+  const submission = response.indicativeSubmission;
+  const isConsultant = response.type === 'CONSULTANT';
+
+  const Section: React.FC<{ title: string; children: React.ReactNode; defaultOpen?: boolean }>
+    = ({ title, children, defaultOpen = true }) => {
+    const [open, setOpen] = useState(defaultOpen);
+    return (
+      <div className="mb-6">
+        <button
+          onClick={() => setOpen(!open)}
+          className="w-full flex items-center justify-between text-left"
+        >
+          <span className="text-lg font-semibold text-slate-900">{title}</span>
+          <span className="text-sm text-slate-500">{open ? 'Hide' : 'Show'}</span>
+        </button>
+        <AnimatePresence initial={false}>
+          {open && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 8 }}
+              className="mt-3"
+            >
+              {children}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  };
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                  <User size={20} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold">{response.name}</h2>
+                  <p className="text-indigo-100 text-sm">
+                    {response.type === 'VENDOR' ? 'Vendor' : 'Consultant'} Submission
+                  </p>
+                </div>
+              </div>
+              <motion.button
+                onClick={onClose}
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+              >
+                <X size={20} />
+              </motion.button>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Star size={16} className="text-amber-300" />
+                <span className="text-sm font-medium">{response.qualificationScore}% Match</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock size={16} className="text-indigo-200" />
+                <span className="text-sm">
+                  Responded in {response.responseTime?.toFixed(1)}h
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
+            {/* Header Summary strip */}
+            <div className="mb-6 flex flex-wrap items-center gap-2">
+              {response.type === 'VENDOR' ? (
+                <div className="px-2 py-1 bg-green-50 text-green-700 text-xs rounded-full border border-green-200 flex items-center gap-1">
+                  <Building2 size={14} /> Grant-Applicable
+                </div>
+              ) : (
+                <div className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-200 flex items-center gap-1">
+                  <BadgePercent size={14} /> Grant Fit
+                </div>
+              )}
+              <div className="px-2 py-1 bg-slate-100 text-slate-700 text-xs rounded-full flex items-center gap-1">
+                <Star size={12} className="text-amber-500" /> {response.qualificationScore}% Match
+              </div>
+              {submission.tags?.map((t) => (
+                <span key={t} className="px-2 py-1 bg-slate-100 text-slate-700 text-xs rounded-full">{t}</span>
+              ))}
+            </div>
+
+            {/* Title */}
+            <h3 className="text-2xl font-bold text-slate-900 mb-2">{submission.title}</h3>
+            <p className="text-slate-600 mb-4">{submission.summary}</p>
+            
+            {/* Consultant vs Vendor sections */}
+            {isConsultant ? (
+              <>
+                {submission.understanding && (
+                  <Section title="Understanding of Your Goal">
+                    <p className="text-slate-700">{submission.understanding}</p>
+                  </Section>
+                )}
+
+                {submission.approachPhases && submission.approachPhases.length > 0 && (
+                  <Section title="Proposed Approach">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {submission.approachPhases.map((p, idx) => (
+                        <div key={idx} className="p-3 bg-indigo-50 rounded-lg border border-indigo-100">
+                          <div className="flex items-center gap-2 mb-1">
+                            {p.icon === 'Search' && <Search size={14} className="text-indigo-600" />}
+                            {p.icon === 'Settings' && <Settings size={14} className="text-indigo-600" />}
+                            {p.icon === 'FileCheck2' && <FileCheck2 size={14} className="text-indigo-600" />}
+                            <span className="font-medium text-slate-900">{p.label}</span>
+                          </div>
+                          <div className="text-xs text-slate-600">{p.weeks}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </Section>
+                )}
+
+                <Section title="Estimated Timeline & Effort">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Calendar size={16} className="text-blue-600" />
+                        <span className="font-medium text-blue-800">Timeline</span>
+                      </div>
+                      <div className="text-xl font-bold text-blue-900">
+                        {submission.timeline[0]} - {submission.timeline[1]} months
+                      </div>
+                    </div>
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <DollarSign size={16} className="text-green-600" />
+                        <span className="font-medium text-green-800">Indicative Fee Band</span>
+                      </div>
+                      <div className="text-xl font-bold text-green-900">
+                        S$ {submission.estimatedCost[0].toLocaleString()}K - {submission.estimatedCost[1].toLocaleString()}K
+                      </div>
+                      <div className="text-xs text-green-700 mt-1">Advisory + Grant Paperwork</div>
+                    </div>
+                  </div>
+                </Section>
+
+                {submission.team && submission.team.length > 0 && (
+                  <Section title="Consultant Team">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {submission.team.map((m, i) => (
+                        <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                          <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-600">
+                            {m.name.split(' ').map(s=>s[0]).join('').slice(0,2)}
+                          </div>
+                          <div>
+                            <div className="font-medium text-slate-900">{m.name}</div>
+                            <div className="text-xs text-slate-600">{m.role}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </Section>
+                )}
+
+                {submission.similarProjects && submission.similarProjects.length > 0 && (
+                  <Section title="Similar Projects Delivered">
+                    <div className="space-y-2">
+                      {submission.similarProjects.map((sp, i) => (
+                        <div key={i} className="p-3 bg-slate-50 rounded-lg text-sm text-slate-700">
+                          <span className="font-medium">{sp.sector}</span> — {sp.result}
+                        </div>
+                      ))}
+                    </div>
+                  </Section>
+                )}
+
+                {submission.assumptions && submission.assumptions.length > 0 && (
+                  <Section title="Dependencies & Assumptions">
+                    <ul className="list-disc ml-5 text-slate-700 space-y-1">
+                      {submission.assumptions.map((a, i) => <li key={i}>{a}</li>)}
+                    </ul>
+                  </Section>
+                )}
+              </>
+            ) : (
+              <>
+                <Section title="Solution Overview">
+                  <p className="text-slate-700">{submission.summary}</p>
+                </Section>
+
+                {submission.keyFeatures?.length > 0 && (
+                  <Section title="Why This Fits Your Goal">
+                    <div className="flex flex-wrap gap-2">
+                      {submission.keyFeatures.slice(0,4).map((f, i) => (
+                        <span key={i} className="px-2 py-1 bg-indigo-50 text-indigo-700 text-xs rounded-full">{f}</span>
+                      ))}
+                    </div>
+                  </Section>
+                )}
+
+                {submission.breakdown && (
+                  <Section title="Product / Service Breakdown">
+                    <div className="space-y-2">
+                      {submission.breakdown.map((b, i) => (
+                        <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                          <span className="text-slate-700">{b.item}</span>
+                          {b.costBand && (
+                            <span className="text-sm font-medium text-slate-900">S$ {b.costBand[0].toLocaleString()}K - {b.costBand[1].toLocaleString()}K</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </Section>
+                )}
+
+                <Section title="Indicative Cost & Timeline">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <DollarSign size={16} className="text-green-600" />
+                        <span className="font-medium text-green-800">Total Cost (non-binding)</span>
+                      </div>
+                      <div className="text-xl font-bold text-green-900">
+                        S$ {submission.estimatedCost[0].toLocaleString()}K - {submission.estimatedCost[1].toLocaleString()}K
+                      </div>
+                    </div>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Calendar size={16} className="text-blue-600" />
+                        <span className="font-medium text-blue-800">Implementation Timeline</span>
+                      </div>
+                      <div className="text-xl font-bold text-blue-900">
+                        {submission.timeline[0]} - {submission.timeline[1]} months
+                      </div>
+                    </div>
+                  </div>
+                </Section>
+
+                {(submission.grantEligible || submission.grantTag) && (
+                  <Section title="Grant Eligibility / Status">
+                    <div className="px-3 py-2 bg-green-50 border border-green-200 rounded-lg inline-flex items-center gap-2 text-green-700">
+                      <Building2 size={14} />
+                      <span>
+                        {submission.grantEligible ? 'Eligible' : 'Potentially eligible'} {submission.grantTag ? `(${submission.grantTag})` : ''}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600 mt-2">Eligible for up to 50% support, subject to approval.</p>
+                  </Section>
+                )}
+
+                {(submission.support || submission.addOns) && (
+                  <Section title="Support & Add-Ons">
+                    {submission.support && (
+                      <p className="text-slate-700 mb-2">{submission.support}</p>
+                    )}
+                    {submission.addOns && (
+                      <div className="flex flex-wrap gap-2">
+                        {submission.addOns.map((a, i) => (
+                          <span key={i} className="px-2 py-1 bg-slate-100 text-slate-700 text-xs rounded-full">{a}</span>
+                        ))}
+                      </div>
+                    )}
+                  </Section>
+                )}
+              </>
+            )}
+
+            {/* Next Steps (shared) */}
+            {submission.nextSteps?.length > 0 && (
+              <div className="mb-6">
+                <h4 className="text-lg font-semibold text-slate-900 mb-3">Next Steps</h4>
+                <div className="space-y-3">
+                  {submission.nextSteps.map((step, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg"
+                    >
+                      <div className="w-6 h-6 bg-indigo-600 text-white rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                        {index + 1}
+                      </div>
+                      <span className="text-slate-700">{step}</span>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer with sticky mobile CTA */}
+          <div className="bg-slate-50 border-t border-slate-200 p-6 sticky bottom-0">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-slate-600">
+                This is an indicative submission. Contact {response.name} for detailed discussions.
+              </div>
+              <div className="flex items-center gap-3">
+                <motion.button
+                  onClick={onClose}
+                  className="px-4 py-2 text-slate-600 hover:text-slate-800 transition-colors"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Close
+                </motion.button>
+                <motion.button
+                  className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Contact {response.name}
+                  <ArrowRight size={16} />
+                </motion.button>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+};
+[IndicativeSubmissionModal.tsx: end]
+
+File: components/matching/LiveResponseCard.tsx
+[LiveResponseCard.tsx: start]
+import React from 'react';
+import { motion } from 'framer-motion';
+import { 
+  CheckCircle, 
+  Clock, 
+  Eye,
+  Star,
+  ArrowRight,
+  Building2,
+  Users
+} from 'lucide-react';
+import { LeadResponse } from '../../state/matching/types';
+
+interface LiveResponseCardProps {
+  response: LeadResponse;
+  onViewSubmission: (response: LeadResponse) => void;
+  // Add new props:
+  onCompareSelect?: (response: LeadResponse) => void;
+  isCompareSelected?: boolean;
+  isCompareDisabled?: boolean;
+}
+
+const getStatusConfig = (status: LeadResponse['status']) => {
+  switch (status) {
+    case 'ACCEPTED':
+      return {
+        icon: CheckCircle,
+        color: 'text-green-600',
+        bgColor: 'bg-green-50',
+        label: 'Accepted',
+        dotColor: 'bg-green-500'
+      };
+    case 'PENDING':
+      return {
+        icon: Clock,
+        color: 'text-amber-600',
+        bgColor: 'bg-amber-50',
+        label: 'Pending',
+        dotColor: 'bg-amber-500'
+      };
+    default:
+      return {
+        icon: Clock,
+        color: 'text-slate-600',
+        bgColor: 'bg-slate-50',
+        label: status,
+        dotColor: 'bg-slate-500'
+      };
+  }
+};
+
+const getTypeConfig = (type: LeadResponse['type']) => {
+  switch (type) {
+    case 'VENDOR':
+      return {
+        icon: Building2,
+        label: 'Vendor',
+        color: 'text-blue-600'
+      };
+    case 'CONSULTANT':
+      return {
+        icon: Users,
+        label: 'Consultant',
+        color: 'text-purple-600'
+      };
+  }
+};
+
+export const LiveResponseCard: React.FC<LiveResponseCardProps> = ({ 
+  response, 
+  onViewSubmission, 
+  onCompareSelect,
+  isCompareSelected = false,
+  isCompareDisabled = false,
+}) => {
+  const statusConfig = getStatusConfig(response.status);
+  const typeConfig = getTypeConfig(response.type);
+  const StatusIcon = statusConfig.icon;
+
+  const formatTimeRemaining = (expiresAt: Date) => {
+    const now = new Date();
+    const diff = expiresAt.getTime() - now.getTime();
+    const hours = Math.max(0, Math.floor(diff / (1000 * 60 * 60)));
+    const minutes = Math.max(0, Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)));
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    } else if (minutes > 0) {
+      return `${minutes}m`;
+    } else {
+      return 'Expired';
+    }
+  };
+
+  const formatResponseTime = (responseTime?: number) => {
+    if (!responseTime) return null;
+    if (responseTime < 1) {
+      return `${Math.round(responseTime * 60)}m`;
+    }
+    return `${responseTime.toFixed(1)}h`;
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{ scale: 1.01 }}
+      className={`bg-white border border-slate-200 rounded-xl p-5 hover:border-slate-300 transition-all duration-200 relative`}
+    >
+      {/* --- NEW: Compare Select Pill --- */}
+      <div className="absolute top-3 right-4 z-10 flex gap-2 items-center">
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); onCompareSelect && onCompareSelect(response); }}
+          disabled={isCompareDisabled}
+          className={
+            `transition-all text-xs font-semibold px-3 py-1 rounded-full
+            border-2 ${isCompareSelected ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-200 bg-slate-50 text-slate-600'}
+            ${isCompareDisabled ? 'opacity-60 pointer-events-none' : 'hover:border-blue-400'}
+            shadow-sm`
+          }
+        >
+          {isCompareSelected ? '✓ Selected' : '☑︎ Select to compare'}
+        </button>
+      </div>
+      {/* --- END NEW --- */}
+      {/* Header */}
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
+            <typeConfig.icon size={18} className={typeConfig.color} />
+          </div>
+          <div>
+            <h3 className="font-semibold text-slate-900">{response.name}</h3>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-xs text-slate-500">{typeConfig.label}</span>
+              <span className="text-xs text-slate-400">•</span>
+              <div className="flex items-center gap-1">
+                <Star size={12} className="text-amber-500" />
+                <span className="text-xs font-medium text-slate-600">
+                  {response.qualificationScore}% match
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Status Dot */}
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full ${statusConfig.dotColor}`} />
+          <span className="text-sm font-medium text-slate-700">{statusConfig.label}</span>
+        </div>
+      </div>
+
+      {/* Response Info */}
+      {response.responseTime && (
+        <div className="text-sm text-slate-600 mb-3">
+          Responded in {formatResponseTime(response.responseTime)}
+        </div>
+      )}
+
+      {/* Time Remaining */}
+      <div className="text-sm text-slate-500 mb-4">
+        {response.status === 'PENDING' 
+          ? `Response due in ${formatTimeRemaining(response.expiresAt)}`
+          : `Expires in ${formatTimeRemaining(response.expiresAt)}`
+        }
+      </div>
+
+      {/* Action Button */}
+      {response.status === 'ACCEPTED' && response.indicativeSubmission && (
+        <motion.button
+          onClick={() => onViewSubmission(response)}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-50 text-slate-700 rounded-lg hover:bg-slate-100 transition-colors text-sm font-medium"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <Eye size={16} />
+          View Indicative Submission
+          <ArrowRight size={14} />
+        </motion.button>
+      )}
+
+      {response.status === 'PENDING' && (
+        <div className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-amber-50 text-amber-700 rounded-lg text-sm font-medium">
+          <Clock size={16} />
+          Awaiting Response
+        </div>
+      )}
+    </motion.div>
+  );
+};
+[LiveResponseCard.tsx: end]
+
+File: components/matching/StatsOverview.tsx
+[StatsOverview.tsx: start]
+import React from 'react';
+import { motion } from 'framer-motion';
+import { 
+  CheckCircle, 
+  XCircle, 
+  Clock, 
+  AlertCircle, 
+  TrendingUp, 
+  Timer,
+  Users,
+  Target
+} from 'lucide-react';
+import { MatchingStats, ResponseWindow } from '../../state/matching/types';
+
+interface StatsOverviewProps {
+  stats: MatchingStats;
+  responseWindow: ResponseWindow;
+}
+
+const StatCard: React.FC<{
+  icon: React.ReactNode;
+  label: string;
+  value: string | number;
+  color: string;
+  bgColor: string;
+  trend?: string;
+}> = ({ icon, label, value, color, bgColor, trend }) => (
+  <motion.div
+    initial={{ opacity: 0, scale: 0.95 }}
+    animate={{ opacity: 1, scale: 1 }}
+    className={`${bgColor} rounded-xl p-4 border border-slate-200`}
+  >
+    <div className="flex items-center justify-between mb-2">
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${color}`}>
+        {icon}
+      </div>
+      {trend && (
+        <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">
+          {trend}
+        </span>
+      )}
+    </div>
+    <div className="text-2xl font-bold text-slate-900 mb-1">{value}</div>
+    <div className="text-sm text-slate-600">{label}</div>
+  </motion.div>
+);
+
+const ResponseWindowCard: React.FC<{ responseWindow: ResponseWindow }> = ({ responseWindow }) => {
+  const getUrgencyColor = (hours: number) => {
+    if (hours <= 2) return 'text-red-600 bg-red-50 border-red-200';
+    if (hours <= 6) return 'text-amber-600 bg-amber-50 border-amber-200';
+    return 'text-blue-600 bg-blue-50 border-blue-200';
+  };
+
+  const urgencyConfig = getUrgencyColor(responseWindow.hoursRemaining);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`${urgencyConfig.split(' ')[1]} border-2 ${urgencyConfig.split(' ')[2]} rounded-xl p-4`}
+    >
+      <div className="flex items-center gap-3 mb-2">
+        <Timer size={20} className={urgencyConfig.split(' ')[0]} />
+        <span className={`font-semibold ${urgencyConfig.split(' ')[0]}`}>
+          Response Window
+        </span>
+      </div>
+      <div className="text-lg font-bold text-slate-900 mb-1">
+        {responseWindow.hoursRemaining}h remaining
+      </div>
+      <div className="text-sm text-slate-600">
+        {responseWindow.isUrgent ? 'Urgent - Responses closing soon' : 'Responses still being accepted'}
+      </div>
+    </motion.div>
+  );
+};
+
+export const StatsOverview: React.FC<StatsOverviewProps> = ({ stats, responseWindow }) => {
+  const responseRate = stats.responseRate;
+  const isGoodResponseRate = responseRate >= 70;
+  const isUrgent = responseWindow.hoursRemaining <= 6;
+
+  return (
+    <div className="space-y-6">
+      {/* Response Window Alert */}
+      <ResponseWindowCard responseWindow={responseWindow} />
+
+      {/* Main Stats Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          icon={<CheckCircle size={16} className="text-green-600" />}
+          label="Accepted"
+          value={stats.accepted}
+          color="bg-green-100"
+          bgColor="bg-white"
+          trend={stats.accepted > 0 ? `+${stats.accepted}` : undefined}
+        />
+        
+        <StatCard
+          icon={<XCircle size={16} className="text-red-600" />}
+          label="Declined"
+          value={stats.declined}
+          color="bg-red-100"
+          bgColor="bg-white"
+        />
+        
+        <StatCard
+          icon={<Clock size={16} className="text-amber-600" />}
+          label="Pending"
+          value={stats.pending}
+          color="bg-amber-100"
+          bgColor="bg-white"
+        />
+        
+        <StatCard
+          icon={<AlertCircle size={16} className="text-slate-600" />}
+          label="Expired"
+          value={stats.expired}
+          color="bg-slate-100"
+          bgColor="bg-white"
+        />
+      </div>
+
+      {/* Performance Metrics */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-4"
+        >
+          <div className="flex items-center gap-3 mb-2">
+            <TrendingUp size={20} className="text-indigo-600" />
+            <span className="font-semibold text-indigo-700">Response Rate</span>
+          </div>
+          <div className="text-2xl font-bold text-slate-900 mb-1">{responseRate}%</div>
+          <div className="text-sm text-slate-600">
+            {isGoodResponseRate ? 'Excellent response rate' : 'Good response rate'}
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4"
+        >
+          <div className="flex items-center gap-3 mb-2">
+            <Timer size={20} className="text-green-600" />
+            <span className="font-semibold text-green-700">Avg Response Time</span>
+          </div>
+          <div className="text-2xl font-bold text-slate-900 mb-1">{stats.avgResponseTime}h</div>
+          <div className="text-sm text-slate-600">Average time to respond</div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl p-4"
+        >
+          <div className="flex items-center gap-3 mb-2">
+            <Users size={20} className="text-purple-600" />
+            <span className="font-semibold text-purple-700">Total Sent</span>
+          </div>
+          <div className="text-2xl font-bold text-slate-900 mb-1">{stats.totalSent}</div>
+          <div className="text-sm text-slate-600">Invitations dispatched</div>
+        </motion.div>
+      </div>
+    </div>
+  );
+};
+[StatsOverview.tsx: end]
+
+File: components/matching/StatusCard.tsx
+[StatusCard.tsx: start]
+import React from 'react';
+import { motion } from 'framer-motion';
+import { 
+  CheckCircle, 
+  XCircle, 
+  Clock, 
+  AlertCircle, 
+  Eye, 
+  Star,
+  DollarSign,
+  Calendar,
+  ArrowRight
+} from 'lucide-react';
+import { LeadResponse } from '../../state/matching/types';
+
+interface StatusCardProps {
+  response: LeadResponse;
+  onViewSubmission: (response: LeadResponse) => void;
+}
+
+const getStatusConfig = (status: LeadResponse['status']) => {
+  switch (status) {
+    case 'ACCEPTED':
+      return {
+        icon: CheckCircle,
+        color: 'text-green-600',
+        bgColor: 'bg-green-50',
+        borderColor: 'border-green-200',
+        label: 'Accepted',
+        labelColor: 'text-green-700'
+      };
+    case 'DECLINED':
+      return {
+        icon: XCircle,
+        color: 'text-red-600',
+        bgColor: 'bg-red-50',
+        borderColor: 'border-red-200',
+        label: 'Declined',
+        labelColor: 'text-red-700'
+      };
+    case 'PENDING':
+      return {
+        icon: Clock,
+        color: 'text-amber-600',
+        bgColor: 'bg-amber-50',
+        borderColor: 'border-amber-200',
+        label: 'Pending',
+        labelColor: 'text-amber-700'
+      };
+    case 'EXPIRED':
+      return {
+        icon: AlertCircle,
+        color: 'text-slate-600',
+        bgColor: 'bg-slate-50',
+        borderColor: 'border-slate-200',
+        label: 'Expired',
+        labelColor: 'text-slate-700'
+      };
+  }
+};
+
+const getTypeConfig = (type: LeadResponse['type']) => {
+  switch (type) {
+    case 'VENDOR':
+      return {
+        icon: '🏢',
+        label: 'Vendor',
+        color: 'text-blue-600',
+        bgColor: 'bg-blue-50'
+      };
+    case 'CONSULTANT':
+      return {
+        icon: '👥',
+        label: 'Consultant',
+        color: 'text-purple-600',
+        bgColor: 'bg-purple-50'
+      };
+  }
+};
+
+export const StatusCard: React.FC<StatusCardProps> = ({ response, onViewSubmission }) => {
+  const statusConfig = getStatusConfig(response.status);
+  const typeConfig = getTypeConfig(response.type);
+  const StatusIcon = statusConfig.icon;
+
+  const formatTimeRemaining = (expiresAt: Date) => {
+    const now = new Date();
+    const diff = expiresAt.getTime() - now.getTime();
+    const hours = Math.max(0, Math.floor(diff / (1000 * 60 * 60)));
+    const minutes = Math.max(0, Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)));
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    } else if (minutes > 0) {
+      return `${minutes}m`;
+    } else {
+      return 'Expired';
+    }
+  };
+
+  const formatResponseTime = (responseTime?: number) => {
+    if (!responseTime) return null;
+    if (responseTime < 1) {
+      return `${Math.round(responseTime * 60)}m`;
+    }
+    return `${responseTime.toFixed(1)}h`;
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{ scale: 1.02 }}
+      className={`relative bg-white rounded-xl border-2 ${statusConfig.borderColor} shadow-sm hover:shadow-md transition-all duration-200`}
+    >
+      {/* Status Badge */}
+      <div className={`absolute -top-2 -right-2 w-8 h-8 ${statusConfig.bgColor} rounded-full flex items-center justify-center shadow-lg`}>
+        <StatusIcon size={16} className={statusConfig.color} />
+      </div>
+
+      {/* Qualification Score */}
+      <div className="absolute top-4 left-4">
+        <div className="flex items-center gap-1 px-2 py-1 bg-slate-100 rounded-full">
+          <Star size={12} className="text-amber-500" />
+          <span className="text-xs font-semibold text-slate-700">{response.qualificationScore}%</span>
+        </div>
+      </div>
+
+      <div className="p-6">
+        {/* Header */}
+        <div className="flex items-start gap-4 mb-4">
+          <div className="w-12 h-12 bg-gradient-to-br from-slate-100 to-slate-200 rounded-xl flex items-center justify-center text-2xl">
+            {typeConfig.icon}
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-slate-900 mb-1">{response.name}</h3>
+            <div className="flex items-center gap-2">
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${typeConfig.bgColor} ${typeConfig.color}`}>
+                {typeConfig.label}
+              </span>
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusConfig.bgColor} ${statusConfig.labelColor}`}>
+                {statusConfig.label}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Response Time */}
+        {response.responseTime && (
+          <div className="flex items-center gap-2 mb-4 text-sm text-slate-600">
+            <Clock size={14} />
+            <span>Responded in {formatResponseTime(response.responseTime)}</span>
+          </div>
+        )}
+
+        {/* Time Remaining */}
+        <div className="flex items-center gap-2 mb-4 text-sm text-slate-600">
+          <Calendar size={14} />
+          <span>
+            {response.status === 'PENDING' 
+              ? `Response due in ${formatTimeRemaining(response.expiresAt)}`
+              : `Expires in ${formatTimeRemaining(response.expiresAt)}`
+            }
+          </span>
+        </div>
+
+        {/* Indicative Submission Preview */}
+        {response.indicativeSubmission && (
+          <div className="bg-slate-50 rounded-lg p-4 mb-4">
+            <h4 className="font-medium text-slate-900 mb-2 text-sm">
+              {response.indicativeSubmission.title}
+            </h4>
+            <p className="text-xs text-slate-600 mb-3">
+              {response.indicativeSubmission.summary}
+            </p>
+            
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div className="flex items-center gap-1">
+                <DollarSign size={12} className="text-green-600" />
+                <span className="text-xs text-slate-700">
+                  S$ {response.indicativeSubmission.estimatedCost[0].toLocaleString()}K - {response.indicativeSubmission.estimatedCost[1].toLocaleString()}K
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Calendar size={12} className="text-blue-600" />
+                <span className="text-xs text-slate-700">
+                  {response.indicativeSubmission.timeline[0]} - {response.indicativeSubmission.timeline[1]} months
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-1">
+              {response.indicativeSubmission.keyFeatures.slice(0, 2).map((feature, index) => (
+                <span
+                  key={index}
+                  className="px-2 py-1 bg-indigo-100 text-indigo-700 text-xs rounded-full"
+                >
+                  {feature}
+                </span>
+              ))}
+              {response.indicativeSubmission.keyFeatures.length > 2 && (
+                <span className="px-2 py-1 bg-slate-200 text-slate-600 text-xs rounded-full">
+                  +{response.indicativeSubmission.keyFeatures.length - 2} more
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Action Button */}
+        {response.status === 'ACCEPTED' && response.indicativeSubmission && (
+          <motion.button
+            onClick={() => onViewSubmission(response)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Eye size={16} />
+            View Indicative Submission
+            <ArrowRight size={14} />
+          </motion.button>
+        )}
+
+        {response.status === 'PENDING' && (
+          <div className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-medium">
+            <Clock size={16} />
+            Awaiting Response
+          </div>
+        )}
+
+        {response.status === 'DECLINED' && (
+          <div className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium">
+            <XCircle size={16} />
+            Declined
+          </div>
+        )}
+
+        {response.status === 'EXPIRED' && (
+          <div className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 text-slate-500 rounded-lg text-sm font-medium">
+            <AlertCircle size={16} />
+            Response Window Closed
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+};
+[StatusCard.tsx: end]
+
+File: components/preview/ConsultantCard.tsx
+[ConsultantCard.tsx: start]
+import React from 'react';
+import { motion } from 'framer-motion';
+import { Check, Plus, Info, Star, Clock, Award, User } from 'lucide-react';
+import { Consultant } from '../../state/preview/types';
+
+interface ConsultantCardProps {
+  consultant: Consultant;
+  isRecommended: boolean;
+  onToggle: (id: string) => void;
+  onAdd?: (id: string) => void;
+  onInfo?: (consultant: Consultant) => void;
+}
+
+const getMatchColor = (match: number) => {
+  if (match >= 85) return 'from-green-500 to-emerald-500';
+  if (match >= 70) return 'from-blue-500 to-indigo-500';
+  return 'from-slate-400 to-slate-500';
+};
+
+const getMatchBadge = (match: number) => {
+  if (match >= 85) return 'Top Match';
+  if (match >= 70) return 'Good Match';
+  return 'Fair Match';
+};
+
+const getHighlightBadges = (consultant: Consultant) => {
+  const badges = [];
+  if (consultant.match >= 85) badges.push('Top Match');
+  if (consultant.avgTurnaround <= 14) badges.push('Fast Turnaround');
+  if (consultant.successRate >= 90) badges.push('High Success Rate');
+  return badges;
+};
+
+export const ConsultantCard: React.FC<ConsultantCardProps> = ({
+  consultant,
+  isRecommended,
+  onToggle,
+  onAdd,
+  onInfo
+}) => {
+  const matchColor = getMatchColor(consultant.match);
+  const matchBadge = getMatchBadge(consultant.match);
+  const highlightBadges = getHighlightBadges(consultant);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{ scale: 1.02 }}
+      className={`relative rounded-xl border shadow-sm hover:shadow-md transition-all duration-200 ${
+        consultant.selected ? 'ring-2 ring-indigo-500 bg-indigo-50/30' : 'bg-white'
+      }`}
+    >
+      {/* Match % Gradient Bar */}
+      <div className={`h-1 rounded-t-xl bg-gradient-to-r ${matchColor}`} />
+      
+      <div className="p-5">
+        {/* Header */}
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
+              <User size={20} className="text-slate-600" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-slate-900">{consultant.name}</h3>
+              <p className="text-sm text-slate-600 mt-1">
+                "{consultant.specialty} · {consultant.experience} · {consultant.successRate}% win rate"
+              </p>
+            </div>
+          </div>
+          
+          <div className="text-right">
+            <div className="flex items-center gap-1 mb-1">
+              <Award size={14} className="text-indigo-600" />
+              <span className="text-sm font-medium text-slate-900">{matchBadge}</span>
+            </div>
+            <span className="text-lg font-bold text-indigo-600">{consultant.match}%</span>
+          </div>
+        </div>
+
+        {/* Core Focus */}
+        <div className="mb-3">
+          <p className="text-xs font-medium text-slate-500 mb-2">Core Focus:</p>
+          <div className="flex flex-wrap gap-1">
+            {consultant.coreFocus.map((focus, index) => (
+              <span
+                key={index}
+                className="px-2 py-1 bg-indigo-50 text-indigo-700 text-xs rounded-full"
+              >
+                {focus}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="flex items-center gap-4 mb-4 text-sm text-slate-600">
+          <div className="flex items-center gap-1">
+            <Star size={14} className="text-amber-500" />
+            <span>{consultant.rating} / 5</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Clock size={14} />
+            <span>Avg Turnaround: {consultant.avgTurnaround} days</span>
+          </div>
+        </div>
+
+        {/* Highlight Badges */}
+        {highlightBadges.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {highlightBadges.map((badge, index) => (
+              <span
+                key={index}
+                className="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full"
+              >
+                {badge}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <motion.button
+              onClick={() => onToggle(consultant.id)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                consultant.selected
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Check size={14} />
+              {consultant.selected ? 'Selected' : 'Select'}
+            </motion.button>
+
+            {!isRecommended && onAdd && (
+              <motion.button
+                onClick={() => onAdd(consultant.id)}
+                className="flex items-center gap-2 px-3 py-2 text-slate-600 hover:text-slate-800 transition-colors"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Plus size={14} />
+                Add
+              </motion.button>
+            )}
+          </div>
+
+          {onInfo && (
+            <motion.button
+              onClick={() => onInfo(consultant)}
+              className="p-2 text-slate-400 hover:text-slate-600 transition-colors"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+            >
+              <Info size={16} />
+            </motion.button>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+[ConsultantCard.tsx: end]
+
+File: components/preview/DispatchSummary.tsx
+[DispatchSummary.tsx: start]
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { CheckCircle, Lock, ChevronDown, ChevronUp } from 'lucide-react';
+
+interface DispatchSummaryProps {
+  vendorCount: number;
+  consultantCount: number;
+  visibility: 'PRIVATE' | 'LIMITED' | 'PUBLIC';
+  onVisibilityChange: (visibility: 'PRIVATE' | 'LIMITED' | 'PUBLIC') => void;
+}
+
+const getVisibilityText = (visibility: 'PRIVATE' | 'LIMITED' | 'PUBLIC') => {
+  switch (visibility) {
+    case 'PRIVATE': return 'Private (Only you can see)';
+    case 'LIMITED': return 'Limited (Only matched vendors/consultants can view lead preview)';
+    case 'PUBLIC': return 'Public (Visible to all SmartGrant users)';
+  }
+};
+
+const getVisibilityColor = (visibility: 'PRIVATE' | 'LIMITED' | 'PUBLIC') => {
+  switch (visibility) {
+    case 'PRIVATE': return 'text-slate-600';
+    case 'LIMITED': return 'text-blue-600';
+    case 'PUBLIC': return 'text-green-600';
+  }
+};
+
+export const DispatchSummary: React.FC<DispatchSummaryProps> = ({
+  vendorCount,
+  consultantCount,
+  visibility,
+  onVisibilityChange
+}) => {
+  const [showVisibilityOptions, setShowVisibilityOptions] = useState(false);
+
+  const totalSelected = vendorCount + consultantCount;
+  const canDispatch = vendorCount > 0;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6"
+    >
+      <div className="flex items-start gap-3 mb-4">
+        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+          <CheckCircle size={16} className="text-green-600" />
+        </div>
+        <div className="flex-1">
+          <h3 className="font-semibold text-green-900 mb-1">Ready to Dispatch</h3>
+          <p className="text-sm text-green-700">
+            You've selected {vendorCount} vendor{vendorCount !== 1 ? 's' : ''} and {consultantCount} consultant{consultantCount !== 1 ? 's' : ''}.<br />
+            They'll receive masked lead previews (valid 72h) and can accept for 1 credit each.
+          </p>
+        </div>
+      </div>
+
+      {/* Visibility Settings */}
+      <div className="border-t border-green-200 pt-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Lock size={16} className="text-slate-500" />
+            <span className="text-sm font-medium text-slate-700">Visibility:</span>
+            <span className={`text-sm ${getVisibilityColor(visibility)}`}>
+              {getVisibilityText(visibility)}
+            </span>
+          </div>
+          
+          <motion.button
+            onClick={() => setShowVisibilityOptions(!showVisibilityOptions)}
+            className="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-700 transition-colors"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <span>Change visibility</span>
+            {showVisibilityOptions ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </motion.button>
+        </div>
+
+        <AnimatePresence>
+          {showVisibilityOptions && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mt-3 space-y-2"
+            >
+              {[
+                { value: 'PRIVATE', label: 'Private', desc: 'Only you can see this lead' },
+                { value: 'LIMITED', label: 'Limited', desc: 'Only matched vendors/consultants' },
+                { value: 'PUBLIC', label: 'Public', desc: 'Visible to all SmartGrant users' }
+              ].map((option) => (
+                <motion.button
+                  key={option.value}
+                  onClick={() => {
+                    onVisibilityChange(option.value as 'PRIVATE' | 'LIMITED' | 'PUBLIC');
+                    setShowVisibilityOptions(false);
+                  }}
+                  className={`w-full text-left p-3 rounded-lg border transition-all ${
+                    visibility === option.value
+                      ? 'border-indigo-500 bg-indigo-50'
+                      : 'border-slate-200 hover:border-slate-300'
+                  }`}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                >
+                  <div className="font-medium text-slate-900">{option.label}</div>
+                  <div className="text-sm text-slate-600">{option.desc}</div>
+                </motion.button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Warning Messages */}
+      {!canDispatch && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg"
+        >
+          <p className="text-sm text-amber-800">
+            Select at least 1 vendor to proceed.
+          </p>
+        </motion.div>
+      )}
+
+      {vendorCount > 5 && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg"
+        >
+          <p className="text-sm text-orange-800">
+            SmartGrant suggests ≤ 5 vendors for optimal response rates.
+          </p>
+        </motion.div>
+      )}
+
+      {consultantCount > 3 && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg"
+        >
+          <p className="text-sm text-orange-800">
+            SmartGrant suggests ≤ 3 consultants for optimal response rates.
+          </p>
+        </motion.div>
+      )}
+    </motion.div>
+  );
+};
+[DispatchSummary.tsx: end]
+
+File: components/preview/VendorCard.tsx
+[VendorCard.tsx: start]
+import React from 'react';
+import { motion } from 'framer-motion';
+import { Check, Plus, Info, Zap, DollarSign, Clock, Tag } from 'lucide-react';
+import { Vendor } from '../../state/preview/types';
+
+interface VendorCardProps {
+  vendor: Vendor;
+  isRecommended: boolean;
+  onToggle: (id: string) => void;
+  onAdd?: (id: string) => void;
+  onInfo?: (vendor: Vendor) => void;
+}
+
+const getMatchColor = (match: number) => {
+  if (match >= 85) return 'from-green-500 to-emerald-500';
+  if (match >= 70) return 'from-blue-500 to-indigo-500';
+  return 'from-slate-400 to-slate-500';
+};
+
+const getMatchBadge = (match: number) => {
+  if (match >= 85) return 'High AI Match';
+  if (match >= 70) return 'Good Match';
+  return 'Fair Match';
+};
+
+const getGrantBadge = (grantTag: string) => {
+  switch (grantTag) {
+    case 'PSG': return { text: 'PSG Pre-Approved', color: 'bg-blue-100 text-blue-700' };
+    case 'EDG': return { text: 'EDG Eligible', color: 'bg-purple-100 text-purple-700' };
+    default: return { text: 'Direct Purchase', color: 'bg-slate-100 text-slate-700' };
+  }
+};
+
+export const VendorCard: React.FC<VendorCardProps> = ({
+  vendor,
+  isRecommended,
+  onToggle,
+  onAdd,
+  onInfo
+}) => {
+  const grantBadge = getGrantBadge(vendor.grantTag);
+  const matchColor = getMatchColor(vendor.match);
+  const matchBadge = getMatchBadge(vendor.match);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{ scale: 1.02 }}
+      className={`relative rounded-xl border shadow-sm hover:shadow-md transition-all duration-200 ${
+        vendor.selected ? 'ring-2 ring-indigo-500 bg-indigo-50/30' : 'bg-white'
+      }`}
+    >
+      {/* Match % Gradient Bar */}
+      <div className={`h-1 rounded-t-xl bg-gradient-to-r ${matchColor}`} />
+      
+      <div className="p-5">
+        {/* Header */}
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
+              <Zap size={20} className="text-slate-600" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-slate-900">{vendor.name}</h3>
+              <div className="flex items-center gap-2 mt-1">
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${grantBadge.color}`}>
+                  {grantBadge.text}
+                </span>
+                <span className="text-xs text-slate-500">• {vendor.sector} Sector</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="text-right">
+            <div className="flex items-center gap-1 mb-1">
+              <Zap size={14} className="text-indigo-600" />
+              <span className="text-sm font-medium text-slate-900">{matchBadge}</span>
+            </div>
+            <span className="text-lg font-bold text-indigo-600">{vendor.match}%</span>
+          </div>
+        </div>
+
+        {/* Product Info */}
+        <div className="mb-3">
+          <p className="text-sm text-slate-600 mb-2">{vendor.product}</p>
+          <div className="flex items-center gap-4 text-sm text-slate-500">
+            <div className="flex items-center gap-1">
+              <DollarSign size={14} />
+              <span>Est. Cost S$ {vendor.costRange[0].toLocaleString()}–{vendor.costRange[1].toLocaleString()}K</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Clock size={14} />
+              <span>{vendor.duration[0]}–{vendor.duration[1]} months</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Match Reason */}
+        <div className="mb-4 p-3 bg-slate-50 rounded-lg">
+          <div className="flex items-start gap-2">
+            <Tag size={14} className="text-slate-400 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-xs font-medium text-slate-600 mb-1">Matched because:</p>
+              <p className="text-sm text-slate-700">"{vendor.reason}"</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Tags */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          {vendor.tags.map((tag, index) => (
+            <span
+              key={index}
+              className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-full"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <motion.button
+              onClick={() => onToggle(vendor.id)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                vendor.selected
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Check size={14} />
+              {vendor.selected ? 'Selected' : 'Select'}
+            </motion.button>
+
+            {!isRecommended && onAdd && (
+              <motion.button
+                onClick={() => onAdd(vendor.id)}
+                className="flex items-center gap-2 px-3 py-2 text-slate-600 hover:text-slate-800 transition-colors"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Plus size={14} />
+                Add
+              </motion.button>
+            )}
+          </div>
+
+          {onInfo && (
+            <motion.button
+              onClick={() => onInfo(vendor)}
+              className="p-2 text-slate-400 hover:text-slate-600 transition-colors"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+            >
+              <Info size={16} />
+            </motion.button>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+[VendorCard.tsx: end]
 
 File: features/dashboard/consultant/ConsultantDashboard.tsx
 [ConsultantDashboard.tsx: start]
@@ -2038,8 +3551,8 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({ reqDocId, onBack
     {
       id: 'prop-1',
       name: 'Acme ERP Solutions',
-      type: 'Vendor Proposal',
-      summary: 'Comprehensive cloud ERP implementation with 24/7 support and training.',
+      type: 'Vendor Submission',
+      summary: `Imagine having every part of your F&B business—inventory, finance, reporting and more—connected in one place. This cloud ERP solution isn’t just about software, it’s about simplifying and elevating your day-to-day so you can focus on growth. We guide you every step, ensuring PSG grant optimization and a successful roll-out, with a dedicated support team that understands the F&B sector inside out.`,
       timeline: '3-4 months',
       price: 'S$22,000 - S$25,000',
       features: ['PSG Pre-approved', 'F&B Industry Experience', '24/7 Support', 'Training Included'],
@@ -2048,7 +3561,7 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({ reqDocId, onBack
     {
       id: 'prop-2',
       name: 'Nova Cloud Systems',
-      type: 'Vendor Proposal',
+      type: 'Vendor Submission',
       summary: 'Modern cloud-native ERP with advanced analytics and mobile access.',
       timeline: '2-3 months',
       price: 'S$18,000 - S$22,000',
@@ -2057,9 +3570,9 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({ reqDocId, onBack
     },
     {
       id: 'prop-3',
-      name: 'Carter Advisory',
-      type: 'Consultant Proposal',
-      summary: 'End-to-end grant application support with vendor management and compliance.',
+      name: 'Carter Advisory Group',
+      type: 'Consultant Submission',
+      summary: `Our team provides hands-on support through your grant journey—clarifying requirements, preparing documentation, liaising with vendors, and ensuring nothing falls through the cracks. We’re here to give you confidence, insight and clarity on your F&B digitalization initiatives, from eligibility to claim—so you always know what’s next and how to maximise grant outcomes for your business.`,
       timeline: '4-6 months',
       price: 'S$8,000 - S$12,000',
       features: ['Grant Application', 'Vendor Management', 'Compliance Support', '92% Success Rate'],
@@ -2162,6 +3675,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, CheckCircle, TrendingUp, Users, DollarSign, Clock, ArrowRight } from 'lucide-react';
 import { TRHLSOption } from '../../../state/types';
 import { formatImpact, getGrantBadgeColor, getImpactColor } from '../../../state/trhls/impact';
+import { LeadResponse } from '../../../state/matching/types';
 
 interface CompareDrawerProps {
   isOpen: boolean;
@@ -2370,6 +3884,77 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
             </div>
           </motion.div>
         </>
+      )}
+    </AnimatePresence>
+  );
+};
+
+interface Step6CompareDrawerProps {
+  isOpen: boolean;
+  onClose: () => void;
+  selected: LeadResponse[];
+  onProceed: () => void;
+}
+
+export const Step6CompareDrawer: React.FC<Step6CompareDrawerProps> = ({ isOpen, onClose, selected, onProceed }) => {
+  // Identify types
+  const isVendor = selected.every(s => s.type === 'VENDOR');
+  const isConsultant = selected.every(s => s.type === 'CONSULTANT');
+  const isMixed = !isVendor && !isConsultant;
+  const [roleTab, setRoleTab] = React.useState<'VENDOR' | 'CONSULTANT'>(isVendor ? 'VENDOR' : 'CONSULTANT');
+
+  // Content helper: render row for each attribute/field
+  // ... content functions (omitted for brevity; see original spec for field breakdown by type) ...
+
+  // Placeholder/empty column helpers
+  // ... placeholderCol ...
+
+  // Top row with badges, etc.
+  // ... badgeRow ...
+
+  // CTA: Ready for clarification
+  // ... buttonRow ...
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0, y: '100%' }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: '100%' }}
+          transition={{ duration: 0.15, ease: "easeOut" }}
+          className="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl z-50 max-h-[92vh] overflow-hidden animate-fadeUp"
+        >
+          {/* Header */}
+          <div className="sticky top-0 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-slate-200 px-6 py-4 flex justify-between items-center">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Compare: {selected.length} selected</h2>
+              {isMixed && (
+                <div className="mt-2 flex gap-2">
+                  <button className={`chip ${roleTab === 'VENDOR' ? 'chip-active' : ''}`} onClick={() => setRoleTab('VENDOR')}>Vendor</button>
+                  <button className={`chip ${roleTab === 'CONSULTANT' ? 'chip-active' : ''}`} onClick={() => setRoleTab('CONSULTANT')}>Consultant</button>
+                </div>
+              )}
+            </div>
+            <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 transition-colors">
+              <X size={20} />
+            </button>
+          </div>
+          {/* Content: Grid/Rows */}
+          <div className="p-6 overflow-y-auto">
+            {/* Table with rows for attributes: role-specific or mixed/placeholder */}
+            {/* ... implement row rendering for each content group based on role spec ... */}
+          </div>
+          {/* Footer CTA */}
+          <div className="sticky bottom-0 bg-white border-t border-slate-200 px-6 py-4 flex justify-end">
+            <button
+              onClick={onProceed}
+              className="bg-green-600 text-white font-medium px-6 py-3 rounded-lg hover:bg-green-700 transition-all duration-150 flex items-center gap-2 shadow-md hover:shadow-lg"
+            >
+              Ready for clarification
+            </button>
+          </div>
+        </motion.div>
       )}
     </AnimatePresence>
   );
@@ -3297,12 +4882,10 @@ File: features/opportunityBuilder/sme/Step4_MatchingMode.tsx
 [Step4_MatchingMode.tsx: start]
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Zap, Info, Eye } from 'lucide-react';
-import { Card } from '../../../components/common/Card';
+import { ArrowLeft, ArrowRight, Zap, Info } from 'lucide-react';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { ModeCard } from '../../../components/common/ModeCard';
-import { PeekNextStep } from '../../../components/common/PeekNextStep';
-import { getModeHint, MODE_COPY } from '../../../state/opportunity/uiHints';
+import { getSmartRecommendation } from '../../../state/matching/recommendation';
 import { useAppStore } from '../../../state/store';
 
 interface Step4_MatchingModeProps {
@@ -3332,9 +4915,10 @@ const ProgressBar: React.FC<{ currentStep: number; totalSteps: number }> = ({ cu
 
 const RecommendationBanner: React.FC<{ 
   recommended: 'CONSULTANT_MANAGED' | 'SME_SELF_MANAGED';
-  reason: string;
-  onCompare: () => void;
-}> = ({ recommended, reason, onCompare }) => (
+  bannerText: string;
+  tooltipText: string;
+  isMobile?: boolean;
+}> = ({ recommended, bannerText, tooltipText, isMobile = false }) => (
   <motion.div
     initial={{ opacity: 0, scale: 0.95 }}
     animate={{ opacity: 1, scale: 1 }}
@@ -3353,93 +4937,118 @@ const RecommendationBanner: React.FC<{
           <div className="group relative">
             <Info size={14} className="text-slate-400 cursor-help" />
             <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
-              {reason}
+              {tooltipText}
               <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-900" />
             </div>
           </div>
         </div>
-        <p className="text-sm text-slate-700 mb-2">
-          Based on your scope and grant context, we suggest{' '}
-          <span className="font-medium">
-            {recommended === 'CONSULTANT_MANAGED' ? 'Consultant-Managed' : 'SME Self-Managed'}
-          </span>{' '}
-          for a guided experience.
+        <p className={`text-slate-700 ${isMobile ? 'text-sm' : 'text-sm'}`}>
+          {bannerText}
         </p>
-        <button
-          onClick={onCompare}
-          className="text-xs text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
-        >
-          Compare modes
-        </button>
       </div>
     </div>
   </motion.div>
 );
 
-const StickyFooter: React.FC<{
+const MobileFooter: React.FC<{
   onBack: () => void;
   onContinue: () => void;
-  onPreview: () => void;
   hasSelection: boolean;
   selectedMode: string;
-}> = ({ onBack, onContinue, onPreview, hasSelection, selectedMode }) => (
+}> = ({ onBack, onContinue, hasSelection, selectedMode }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-4 py-3 z-40 md:hidden"
+  >
+    <div className="flex items-center justify-between">
+      <button
+        onClick={onBack}
+        className="px-4 py-2 text-slate-600 hover:text-slate-800 transition-colors text-sm"
+      >
+        ◀ Back
+      </button>
+      
+      <motion.button
+        onClick={onContinue}
+        disabled={!hasSelection}
+        className={`px-6 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 text-sm ${
+          hasSelection
+            ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+            : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+        }`}
+        whileHover={hasSelection ? { scale: 1.02 } : {}}
+        whileTap={hasSelection ? { scale: 0.98 } : {}}
+        aria-label={`Continue with ${selectedMode === 'CONSULTANT_MANAGED' ? 'Consultant-Managed' : 'Self-Managed'} Mode`}
+      >
+        Continue {selectedMode === 'CONSULTANT_MANAGED' ? 'with Consultant-Managed' : 'with Self-Managed'} →
+      </motion.button>
+    </div>
+  </motion.div>
+);
+
+const DesktopFooter: React.FC<{
+  onBack: () => void;
+  onContinue: () => void;
+  hasSelection: boolean;
+  selectedMode: string;
+}> = ({ onBack, onContinue, hasSelection, selectedMode }) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.4, delay: 0.2 }}
-    className="sticky bottom-0 bg-white border-t border-slate-200 px-6 py-4 -mx-6 mt-8"
+    className="hidden md:flex items-center justify-between mt-8 pt-6 border-t border-slate-200"
   >
-    <div className="flex items-center justify-between">
-      <motion.button
-        onClick={onBack}
-        className="px-6 py-2 text-slate-600 hover:text-slate-800 transition-colors"
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-      >
-        Back
-      </motion.button>
-      
-      <div className="flex items-center gap-3">
-        <button
-          onClick={onPreview}
-          className="text-sm text-slate-600 hover:text-slate-800 transition-colors flex items-center gap-1"
-        >
-          <Eye size={14} />
-          Preview next step
-        </button>
-        
-        <motion.button
-          onClick={onContinue}
-          disabled={!hasSelection}
-          className={`px-8 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
-            hasSelection
-              ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md hover:shadow-lg'
-              : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-          }`}
-          whileHover={hasSelection ? { scale: 1.02 } : {}}
-          whileTap={hasSelection ? { scale: 0.98 } : {}}
-        >
-          Continue with {selectedMode === 'CONSULTANT_MANAGED' ? 'Consultant-Managed' : 'Self-Managed'} Mode
-          <ArrowRight size={18} />
-        </motion.button>
-      </div>
-    </div>
+    <motion.button
+      onClick={onBack}
+      className="px-6 py-2 text-slate-600 hover:text-slate-800 transition-colors"
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+    >
+      Back
+    </motion.button>
+    
+    <motion.button
+      onClick={onContinue}
+      disabled={!hasSelection}
+      className={`px-8 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
+        hasSelection
+          ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md hover:shadow-lg'
+          : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+      }`}
+      whileHover={hasSelection ? { scale: 1.02 } : {}}
+      whileTap={hasSelection ? { scale: 0.98 } : {}}
+      aria-label={`Continue with ${selectedMode === 'CONSULTANT_MANAGED' ? 'Consultant-Managed' : 'Self-Managed'} Mode`}
+    >
+      Continue {selectedMode === 'CONSULTANT_MANAGED' ? 'with Consultant-Managed' : 'with Self-Managed'} Mode
+      <ArrowRight size={18} />
+    </motion.button>
   </motion.div>
 );
 
 export const Step4_MatchingMode: React.FC<Step4_MatchingModeProps> = ({ onNext, onBack }) => {
   const { reqDocs } = useAppStore();
   const [selectedMode, setSelectedMode] = useState<'CONSULTANT_MANAGED' | 'SME_SELF_MANAGED' | null>(null);
-  const [showPeek, setShowPeek] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   // Get the most recent ReqDoc (in a real app, this would be the current one)
   const currentReqDoc = reqDocs[reqDocs.length - 1] || null;
-  const modeHint = getModeHint(currentReqDoc);
+  const recommendation = getSmartRecommendation(currentReqDoc);
 
   useEffect(() => {
     // Set default selection to recommended mode
-    setSelectedMode(modeHint.recommended);
-  }, [modeHint.recommended]);
+    setSelectedMode(recommendation.recommended);
+  }, [recommendation.recommended]);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const handleModeSelect = (mode: 'CONSULTANT_MANAGED' | 'SME_SELF_MANAGED') => {
     setSelectedMode(mode);
@@ -3453,12 +5062,8 @@ export const Step4_MatchingMode: React.FC<Step4_MatchingModeProps> = ({ onNext, 
     }
   };
 
-  const handlePreview = () => {
-    setShowPeek(true);
-  };
-
   return (
-    <div className="max-w-6xl mx-auto animate-fade-in">
+    <div className="max-w-6xl mx-auto animate-fade-in pb-20 md:pb-0">
       <button 
         onClick={onBack} 
         className="flex items-center gap-2 mb-6 text-sm font-medium text-indigo-600 hover:text-indigo-700 hover:underline transition-colors"
@@ -3475,9 +5080,10 @@ export const Step4_MatchingMode: React.FC<Step4_MatchingModeProps> = ({ onNext, 
 
       {/* Recommendation Banner */}
       <RecommendationBanner
-        recommended={modeHint.recommended}
-        reason={modeHint.reason}
-        onCompare={() => {/* TODO: Implement compare modal */}}
+        recommended={recommendation.recommended}
+        bannerText={recommendation.bannerText}
+        tooltipText={recommendation.tooltipText}
+        isMobile={isMobile}
       />
 
       {/* Mode Selection */}
@@ -3485,39 +5091,33 @@ export const Step4_MatchingMode: React.FC<Step4_MatchingModeProps> = ({ onNext, 
         <ModeCard
           mode="CONSULTANT_MANAGED"
           isSelected={selectedMode === 'CONSULTANT_MANAGED'}
-          isRecommended={modeHint.recommended === 'CONSULTANT_MANAGED'}
           onSelect={() => handleModeSelect('CONSULTANT_MANAGED')}
-          copy={MODE_COPY.CONSULTANT_MANAGED}
+          isMobile={isMobile}
         />
         
         <ModeCard
           mode="SME_SELF_MANAGED"
           isSelected={selectedMode === 'SME_SELF_MANAGED'}
-          isRecommended={modeHint.recommended === 'SME_SELF_MANAGED'}
           onSelect={() => handleModeSelect('SME_SELF_MANAGED')}
-          copy={MODE_COPY.SME_SELF_MANAGED}
+          isMobile={isMobile}
         />
       </div>
 
-      {/* Sticky Footer */}
-      <StickyFooter
+      {/* Mobile Footer */}
+      <MobileFooter
         onBack={onBack}
         onContinue={handleContinue}
-        onPreview={handlePreview}
         hasSelection={!!selectedMode}
         selectedMode={selectedMode || ''}
       />
 
-      {/* Peek Next Step Dialog */}
-      <AnimatePresence>
-        {showPeek && selectedMode && (
-          <PeekNextStep
-            isOpen={showPeek}
-            onClose={() => setShowPeek(false)}
-            selectedMode={selectedMode}
-          />
-        )}
-      </AnimatePresence>
+      {/* Desktop Footer */}
+      <DesktopFooter
+        onBack={onBack}
+        onContinue={handleContinue}
+        hasSelection={!!selectedMode}
+        selectedMode={selectedMode || ''}
+      />
     </div>
   );
 };
@@ -3582,38 +5182,21 @@ const ShortlistCard: React.FC<{
 
 export const Step5_PreviewAndDispatch: React.FC<Step5_PreviewAndDispatchProps> = ({ onNext, onBack }) => {
   const { currentReqDocId } = useAppStore();
-  const [selectedVendors, setSelectedVendors] = useState<string[]>(['Acme ERP', 'Nova Cloud']);
-  const [selectedConsultants, setSelectedConsultants] = useState<string[]>(['Carter Advisory']);
+  const [selectedVendors, setSelectedVendors] = useState<string[]>(vendors.map(v=>v.name).slice(0,3));
+  const [selectedConsultants, setSelectedConsultants] = useState<string[]>(consultants.map(c=>c.name).slice(0,3));
 
   const vendors = [
-    {
-      name: 'Acme ERP',
-      badges: ['Top Match', 'Budget Fit'],
-      whyMatched: 'PSG pre-approved • 3 case studies in F&B • Fast deployment'
-    },
-    {
-      name: 'Nova Cloud',
-      badges: ['Fastest Deploy', 'Good Support'],
-      whyMatched: 'Cloud-native solution • Strong SG/MY support • Competitive pricing'
-    },
-    {
-      name: 'TechFlow Systems',
-      badges: ['Enterprise Grade'],
-      whyMatched: 'Large-scale implementations • 24/7 support • Custom integrations'
-    }
+    { name: 'Acme ERP', badges: ['Top Match', 'Budget Fit'], whyMatched: 'PSG pre-approved • 3 F&B case studies • Fast deployment' },
+    { name: 'Nova Cloud', badges: ['Fastest Deploy', 'Analytics'], whyMatched: 'Cloud native • Analytics • PSG Approved' },
+    { name: 'TechFlow Systems', badges: ['Enterprise Grade'], whyMatched: 'Manufacturing/IoT specialist • EDG eligible' },
+    { name: 'DataWise Analytics', badges: ['Cost Effective'], whyMatched: 'Affordable analytics • Self-service platform' },
+    { name: 'CloudScale Solutions', badges: ['PSG Ready'], whyMatched: 'F&B inventory specialist • Quick ROI' },
   ];
-
   const consultants = [
-    {
-      name: 'Carter Advisory',
-      badges: ['Top Match', 'High Success Rate'],
-      whyMatched: '92% win rate • 3 years F&B experience • EDG specialist'
-    },
-    {
-      name: 'Aegis Partners',
-      badges: ['Fast Turnaround'],
-      whyMatched: '14-day avg submission • Grant optimization expert • Local market knowledge'
-    }
+    { name: 'Carter Advisory', badges: ['Top Match', 'High Success Rate'], whyMatched: 'EDG specialist • 92% win rate' },
+    { name: 'Aegis Partners', badges: ['Fast Turnaround'], whyMatched: 'Fast claims • PSG/EDG coverage' },
+    { name: 'Strategic Insights', badges: ['Tech Strategy'], whyMatched: 'Digital strategy • Quick start' },
+    { name: 'InsightWorks Consulting', badges: ['Retail & Service'], whyMatched: 'Industry ops experience • 91% success rate' },
   ];
 
   const toggleVendor = (name: string) => {
@@ -3712,17 +5295,927 @@ export const Step5_PreviewAndDispatch: React.FC<Step5_PreviewAndDispatchProps> =
         </button>
         <button 
           onClick={handleDispatch}
-          disabled={selectedVendors.length === 0 && selectedConsultants.length === 0}
-          className="bg-indigo-600 text-white font-semibold px-8 py-3 rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 ml-auto disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:text-slate-500 dark:disabled:text-slate-500 disabled:cursor-not-allowed"
+          disabled={selectedVendors.length<3 || selectedConsultants.length<3}
+          className={"bg-indigo-600 text-white font-semibold px-8 py-3 rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 ml-auto "+(selectedVendors.length<3||selectedConsultants.length<3?' opacity-50 cursor-not-allowed':'')}
         >
           Dispatch Invitations
           <ArrowRight size={18} />
         </button>
+        {(selectedVendors.length<3 || selectedConsultants.length<3)&&(
+          <div className="text-red-500 mt-2 text-sm">Select at least 3 vendors and 3 consultants to proceed.</div>
+        )}
       </div>
     </div>
   );
 };
 [Step5_PreviewAndDispatch.tsx: end]
+
+File: features/opportunityBuilder/sme/Step5_PreviewDispatch.tsx
+[Step5_PreviewDispatch.tsx: start]
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, ArrowRight, CheckCircle, Users, Briefcase, Star, Clock, DollarSign, Shield, Eye, EyeOff, Settings } from 'lucide-react';
+import { PageHeader } from '../../../components/common/PageHeader';
+import { usePreviewStore } from '../../../state/preview/store';
+import { Vendor, Consultant } from '../../../state/preview/types';
+
+interface Step5_PreviewDispatchProps {
+  onNext: () => void;
+  onBack: () => void;
+}
+
+const ProgressBar: React.FC<{ currentStep: number; totalSteps: number }> = ({ currentStep, totalSteps }) => (
+  <div className="mb-8">
+    <div className="flex items-center justify-between mb-2">
+      <span className="text-sm font-medium text-slate-600">Step {currentStep} of {totalSteps}</span>
+      <span className="text-sm text-slate-500">Preview & Dispatch</span>
+    </div>
+    <div className="w-full bg-slate-200 rounded-full h-2">
+      <div 
+        className="bg-gradient-to-r from-indigo-500 to-purple-500 h-2 rounded-full transition-all duration-500 ease-out"
+        style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+      />
+    </div>
+  </div>
+);
+
+const SummaryCard: React.FC<{
+  vendorCount: number;
+  consultantCount: number;
+  totalSelected: number;
+}> = ({ vendorCount, consultantCount, totalSelected }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-2xl p-6 mb-8"
+  >
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center">
+          <CheckCircle size={24} className="text-indigo-600" />
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-slate-900">Ready to Send Invitations</h3>
+          <p className="text-slate-600">Review your selections before dispatching</p>
+        </div>
+      </div>
+      <div className="text-right">
+        <div className="text-2xl font-bold text-indigo-600">{totalSelected}</div>
+        <div className="text-sm text-slate-500">Total Selected</div>
+      </div>
+    </div>
+    
+    <div className="grid grid-cols-2 gap-4 mt-6">
+      <div className="bg-white rounded-lg p-4 border border-slate-200">
+        <div className="flex items-center gap-2 mb-2">
+          <Briefcase size={16} className="text-blue-600" />
+          <span className="text-sm font-medium text-slate-700">Vendors</span>
+        </div>
+        <div className="text-2xl font-bold text-blue-600">{vendorCount}</div>
+      </div>
+      <div className="bg-white rounded-lg p-4 border border-slate-200">
+        <div className="flex items-center gap-2 mb-2">
+          <Users size={16} className="text-purple-600" />
+          <span className="text-sm font-medium text-slate-700">Consultants</span>
+        </div>
+        <div className="text-2xl font-bold text-purple-600">{consultantCount}</div>
+      </div>
+    </div>
+  </motion.div>
+);
+
+const VendorCard: React.FC<{
+  vendor: Vendor;
+  onToggle: (id: string) => void;
+}> = ({ vendor, onToggle }) => (
+  <motion.div
+    initial={{ opacity: 0, scale: 0.95 }}
+    animate={{ opacity: 1, scale: 1 }}
+    whileHover={{ scale: 1.02 }}
+    className={`relative bg-white rounded-xl border-2 transition-all duration-200 cursor-pointer ${
+      vendor.selected 
+        ? 'border-indigo-500 bg-indigo-50/50 shadow-lg' 
+        : 'border-slate-200 hover:border-slate-300 hover:shadow-md'
+    }`}
+    onClick={() => onToggle(vendor.id)}
+  >
+    {/* Selection Indicator */}
+    {vendor.selected && (
+      <div className="absolute -top-2 -right-2 w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center shadow-lg">
+        <CheckCircle size={14} className="text-white" />
+      </div>
+    )}
+
+    {/* Match Badge */}
+    <div className="absolute top-4 right-4">
+      <div className={`px-3 py-1 rounded-full text-xs font-semibold ${
+        vendor.match >= 85 ? 'bg-green-100 text-green-700' :
+        vendor.match >= 70 ? 'bg-blue-100 text-blue-700' :
+        'bg-slate-100 text-slate-700'
+      }`}>
+        {vendor.match}% Match
+      </div>
+    </div>
+
+    <div className="p-6">
+      {/* Header */}
+      <div className="flex items-start gap-4 mb-4">
+        <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-xl">
+          {vendor.name.charAt(0)}
+        </div>
+        <div className="flex-1">
+          <h3 className="text-lg font-semibold text-slate-900 mb-1">{vendor.name}</h3>
+          <p className="text-slate-600 text-sm">{vendor.product}</p>
+          <div className="flex items-center gap-2 mt-2">
+            <span className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-full">
+              {vendor.grantTag} Approved
+            </span>
+            <span className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-full">
+              {vendor.sector} Sector
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="flex items-center gap-2">
+          <DollarSign size={16} className="text-green-600" />
+          <div>
+            <div className="text-sm font-medium text-slate-900">
+              S$ {vendor.costRange[0].toLocaleString()}K - {vendor.costRange[1].toLocaleString()}K
+            </div>
+            <div className="text-xs text-slate-500">Estimated Cost</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Clock size={16} className="text-blue-600" />
+          <div>
+            <div className="text-sm font-medium text-slate-900">
+              {vendor.duration[0]} - {vendor.duration[1]} months
+            </div>
+            <div className="text-xs text-slate-500">Timeline</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Match Reason */}
+      <div className="bg-slate-50 rounded-lg p-3 mb-4">
+        <p className="text-sm text-slate-700">
+          <span className="font-medium">Why matched:</span> {vendor.reason}
+        </p>
+      </div>
+
+      {/* Tags */}
+      <div className="flex flex-wrap gap-2">
+        {vendor.tags.map((tag, index) => (
+          <span
+            key={index}
+            className="px-2 py-1 bg-indigo-100 text-indigo-700 text-xs rounded-full"
+          >
+            {tag}
+          </span>
+        ))}
+      </div>
+    </div>
+  </motion.div>
+);
+
+const ConsultantCard: React.FC<{
+  consultant: Consultant;
+  onToggle: (id: string) => void;
+}> = ({ consultant, onToggle }) => (
+  <motion.div
+    initial={{ opacity: 0, scale: 0.95 }}
+    animate={{ opacity: 1, scale: 1 }}
+    whileHover={{ scale: 1.02 }}
+    className={`relative bg-white rounded-xl border-2 transition-all duration-200 cursor-pointer ${
+      consultant.selected 
+        ? 'border-purple-500 bg-purple-50/50 shadow-lg' 
+        : 'border-slate-200 hover:border-slate-300 hover:shadow-md'
+    }`}
+    onClick={() => onToggle(consultant.id)}
+  >
+    {/* Selection Indicator */}
+    {consultant.selected && (
+      <div className="absolute -top-2 -right-2 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center shadow-lg">
+        <CheckCircle size={14} className="text-white" />
+      </div>
+    )}
+
+    {/* Match Badge */}
+    <div className="absolute top-4 right-4">
+      <div className={`px-3 py-1 rounded-full text-xs font-semibold ${
+        consultant.match >= 85 ? 'bg-green-100 text-green-700' :
+        consultant.match >= 70 ? 'bg-blue-100 text-blue-700' :
+        'bg-slate-100 text-slate-700'
+      }`}>
+        {consultant.match}% Match
+      </div>
+    </div>
+
+    <div className="p-6">
+      {/* Header */}
+      <div className="flex items-start gap-4 mb-4">
+        <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center text-white font-bold text-xl">
+          {consultant.name.charAt(0)}
+        </div>
+        <div className="flex-1">
+          <h3 className="text-lg font-semibold text-slate-900 mb-1">{consultant.name}</h3>
+          <p className="text-slate-600 text-sm">{consultant.specialty}</p>
+          <div className="flex items-center gap-2 mt-2">
+            <span className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-full">
+              {consultant.experience}
+            </span>
+            <span className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-full">
+              {consultant.successRate}% Success Rate
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="flex items-center gap-2">
+          <Star size={16} className="text-amber-500" />
+          <div>
+            <div className="text-sm font-medium text-slate-900">{consultant.rating} / 5</div>
+            <div className="text-xs text-slate-500">Rating</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Clock size={16} className="text-purple-600" />
+          <div>
+            <div className="text-sm font-medium text-slate-900">{consultant.avgTurnaround} days</div>
+            <div className="text-xs text-slate-500">Avg Turnaround</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Core Focus */}
+      <div className="mb-4">
+        <p className="text-xs font-medium text-slate-500 mb-2">Core Focus:</p>
+        <div className="flex flex-wrap gap-1">
+          {consultant.coreFocus.map((focus, index) => (
+            <span
+              key={index}
+              className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full"
+            >
+              {focus}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  </motion.div>
+);
+
+const VisibilitySettings: React.FC<{
+  visibility: 'PRIVATE' | 'LIMITED' | 'PUBLIC';
+  onVisibilityChange: (visibility: 'PRIVATE' | 'LIMITED' | 'PUBLIC') => void;
+}> = ({ visibility, onVisibilityChange }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const options = [
+    {
+      value: 'PRIVATE' as const,
+      label: 'Private',
+      description: 'Only you can see this lead',
+      icon: Shield
+    },
+    {
+      value: 'LIMITED' as const,
+      label: 'Limited',
+      description: 'Only matched vendors/consultants',
+      icon: Eye
+    },
+    {
+      value: 'PUBLIC' as const,
+      label: 'Public',
+      description: 'Visible to all SmartGrant users',
+      icon: EyeOff
+    }
+  ];
+
+  const currentOption = options.find(opt => opt.value === visibility);
+
+  return (
+    <div className="relative">
+      <motion.button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg hover:border-slate-400 transition-colors"
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+      >
+        <Settings size={16} className="text-slate-600" />
+        <span className="text-sm font-medium text-slate-700">
+          Visibility: {currentOption?.label}
+        </span>
+      </motion.button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="absolute top-full left-0 mt-2 w-64 bg-white border border-slate-200 rounded-lg shadow-lg z-10"
+          >
+            {options.map((option) => {
+              const Icon = option.icon;
+              return (
+                <motion.button
+                  key={option.value}
+                  onClick={() => {
+                    onVisibilityChange(option.value);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 transition-colors ${
+                    visibility === option.value ? 'bg-indigo-50' : ''
+                  }`}
+                  whileHover={{ scale: 1.01 }}
+                >
+                  <Icon size={16} className="text-slate-600" />
+                  <div>
+                    <div className="font-medium text-slate-900">{option.label}</div>
+                    <div className="text-xs text-slate-500">{option.description}</div>
+                  </div>
+                </motion.button>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+export const Step5_PreviewDispatch: React.FC<Step5_PreviewDispatchProps> = ({ onNext, onBack }) => {
+  const {
+    vendors,
+    consultants,
+    visibility,
+    vendorCount,
+    consultantCount,
+    toggleVendor,
+    toggleConsultant,
+    setVisibility
+  } = usePreviewStore();
+
+  const totalSelected = vendorCount + consultantCount;
+  const canDispatch = vendorCount > 0;
+
+  // Filter by match percentage
+  const recommendedVendors = vendors.filter(v => v.match >= 80);
+  const otherVendors = vendors.filter(v => v.match < 80);
+  const recommendedConsultants = consultants.filter(c => c.match >= 80);
+  const otherConsultants = consultants.filter(c => c.match < 80);
+
+  return (
+    <div className="max-w-7xl mx-auto animate-fade-in pb-20 md:pb-0">
+      <button 
+        onClick={onBack} 
+        className="flex items-center gap-2 mb-6 text-sm font-medium text-indigo-600 hover:text-indigo-700 hover:underline transition-colors"
+      >
+        <ArrowLeft size={16} />Back to Matching Mode
+      </button>
+      
+      <PageHeader 
+        title="Preview & Dispatch" 
+        subtitle="Review your selected vendors and consultants before sending invitations" 
+      />
+
+      <ProgressBar currentStep={5} totalSteps={5} />
+
+      {/* Summary Card */}
+      <SummaryCard
+        vendorCount={vendorCount}
+        consultantCount={consultantCount}
+        totalSelected={totalSelected}
+      />
+
+      {/* Vendors Section */}
+      <div className="mb-12">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-semibold text-slate-900 mb-1">Vendors</h2>
+            <p className="text-slate-600">Select vendors for your project</p>
+          </div>
+          <div className="text-sm text-slate-500">
+            {vendorCount} of {vendors.length} selected
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {recommendedVendors.map((vendor) => (
+            <VendorCard
+              key={vendor.id}
+              vendor={vendor}
+              onToggle={toggleVendor}
+            />
+          ))}
+        </div>
+
+        {otherVendors.length > 0 && (
+          <div className="mt-8">
+            <h3 className="text-lg font-medium text-slate-900 mb-4">Other Options</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {otherVendors.map((vendor) => (
+                <VendorCard
+                  key={vendor.id}
+                  vendor={vendor}
+                  onToggle={toggleVendor}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Consultants Section */}
+      <div className="mb-12">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-semibold text-slate-900 mb-1">Consultants</h2>
+            <p className="text-slate-600">Select consultants for advisory support</p>
+          </div>
+          <div className="text-sm text-slate-500">
+            {consultantCount} of {consultants.length} selected
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {recommendedConsultants.map((consultant) => (
+            <ConsultantCard
+              key={consultant.id}
+              consultant={consultant}
+              onToggle={toggleConsultant}
+            />
+          ))}
+        </div>
+
+        {otherConsultants.length > 0 && (
+          <div className="mt-8">
+            <h3 className="text-lg font-medium text-slate-900 mb-4">Other Options</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {otherConsultants.map((consultant) => (
+                <ConsultantCard
+                  key={consultant.id}
+                  consultant={consultant}
+                  onToggle={toggleConsultant}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Footer Actions */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.2 }}
+        className="bg-white border-t border-slate-200 p-6 rounded-t-2xl"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <VisibilitySettings
+              visibility={visibility}
+              onVisibilityChange={setVisibility}
+            />
+            {!canDispatch && (
+              <div className="text-sm text-amber-600">
+                Select at least 1 vendor to proceed
+              </div>
+            )}
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <motion.button
+              onClick={onBack}
+              className="px-6 py-2 text-slate-600 hover:text-slate-800 transition-colors"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              Back
+            </motion.button>
+            
+            <motion.button
+              onClick={onNext}
+              disabled={!canDispatch}
+              className={`px-8 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
+                canDispatch
+                  ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg hover:shadow-xl'
+                  : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+              }`}
+              whileHover={canDispatch ? { scale: 1.02 } : {}}
+              whileTap={canDispatch ? { scale: 0.98 } : {}}
+            >
+              Send Invitations
+              <ArrowRight size={18} />
+            </motion.button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+[Step5_PreviewDispatch.tsx: end]
+
+File: features/opportunityBuilder/sme/Step6_LiveMatchingDashboard.tsx
+[Step6_LiveMatchingDashboard.tsx: start]
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  ArrowLeft, 
+  RefreshCw, 
+  Download,
+  Clock,
+  CheckCircle,
+  AlertCircle
+} from 'lucide-react';
+import { PageHeader } from '../../../components/common/PageHeader';
+import { LiveResponseCard } from '../../../components/matching/LiveResponseCard';
+import { IndicativeSubmissionModal } from '../../../components/matching/IndicativeSubmissionModal';
+import { useMatchingStore } from '../../../state/matching/store';
+import { LeadResponse } from '../../../state/matching/types';
+import { Step6CompareDrawer } from './CompareDrawer';
+import { Card } from '../../../components/common/Card';
+import { toast } from 'react-hot-toast'; // If you use a toast lib
+import { useMemo } from 'react';
+
+interface Step6_LiveMatchingDashboardProps {
+  onBack: () => void;
+}
+
+const ProgressBar: React.FC<{ currentStep: number; totalSteps: number }> = ({ currentStep, totalSteps }) => (
+  <div className="mb-8">
+    <div className="flex items-center justify-between mb-2">
+      <span className="text-sm font-medium text-slate-600">Step {currentStep} of {totalSteps}</span>
+      <span className="text-sm text-slate-500">Live Matching Dashboard</span>
+    </div>
+    <div className="w-full bg-slate-200 rounded-full h-2">
+      <div 
+        className="bg-gradient-to-r from-green-500 to-emerald-500 h-2 rounded-full transition-all duration-500 ease-out"
+        style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+      />
+    </div>
+  </div>
+);
+
+const ResponseWindowHeader: React.FC<{
+  totalSent: number;
+  accepted: number;
+  pending: number;
+  hoursRemaining: number;
+  isUrgent: boolean;
+}> = ({ totalSent, accepted, pending, hoursRemaining, isUrgent }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="bg-white border border-slate-200 rounded-xl p-6 mb-8"
+  >
+    <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center gap-3">
+        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+          isUrgent ? 'bg-red-100' : 'bg-blue-100'
+        }`}>
+          <Clock size={20} className={isUrgent ? 'text-red-600' : 'text-blue-600'} />
+        </div>
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900">Response Window</h2>
+          <p className="text-sm text-slate-600">
+            {isUrgent ? 'Responses closing soon' : 'Responses still being accepted'}
+          </p>
+        </div>
+      </div>
+      
+      <div className="text-right">
+        <div className={`text-2xl font-bold ${
+          isUrgent ? 'text-red-600' : 'text-blue-600'
+        }`}>
+          {hoursRemaining}h left
+        </div>
+        <div className="text-sm text-slate-500">remaining</div>
+      </div>
+    </div>
+
+    {/* Progress Summary */}
+    <div className="bg-slate-50 rounded-lg p-4">
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-slate-600">
+          {accepted} of {totalSent} responses received
+        </span>
+        <span className="text-slate-500">
+          {pending} pending
+        </span>
+      </div>
+      
+      {/* Progress Bar */}
+      <div className="w-full bg-slate-200 rounded-full h-2 mt-3">
+        <motion.div
+          className="bg-gradient-to-r from-green-500 to-emerald-500 h-2 rounded-full"
+          initial={{ width: 0 }}
+          animate={{ width: `${(accepted / totalSent) * 100}%` }}
+          transition={{ duration: 1, ease: "easeOut" }}
+        />
+      </div>
+    </div>
+  </motion.div>
+);
+
+const LiveSyncIndicator: React.FC<{ isRefreshing: boolean }> = ({ isRefreshing }) => (
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    className="flex items-center gap-2 text-sm text-slate-500 mb-6"
+  >
+    <motion.div
+      animate={{ rotate: isRefreshing ? 360 : 0 }}
+      transition={{ duration: 1, repeat: isRefreshing ? Infinity : 0, ease: "linear" }}
+    >
+      <RefreshCw size={14} />
+    </motion.div>
+    <span>Live syncing…</span>
+    <div className="w-1 h-1 bg-green-500 rounded-full animate-pulse" />
+  </motion.div>
+);
+
+const ResponseFeed: React.FC<{
+  responses: LeadResponse[];
+  onViewSubmission: (response: LeadResponse) => void;
+  onCompareSelect: (response: LeadResponse) => void;
+  compareSelectedIds: string[];
+  compareLimitReached: boolean;
+}> = ({ responses, onViewSubmission, onCompareSelect, compareSelectedIds, compareLimitReached }) => {
+  // Only show accepted and pending responses
+  const activeResponses = responses.filter(r => r.status === 'ACCEPTED' || r.status === 'PENDING');
+  
+  if (activeResponses.length === 0) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="text-center py-12"
+      >
+        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <Clock size={24} className="text-slate-400" />
+        </div>
+        <h3 className="text-lg font-semibold text-slate-900 mb-2">
+          Awaiting Responses
+        </h3>
+        <p className="text-slate-600">
+          Responses will appear here as vendors and consultants reply to your invitations.
+        </p>
+      </motion.div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {activeResponses.map((response, index) => (
+        <motion.div
+          key={response.id}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: index * 0.1 }}
+        >
+          <LiveResponseCard
+            response={response}
+            onViewSubmission={onViewSubmission}
+            onCompareSelect={onCompareSelect}
+            isCompareSelected={compareSelectedIds.includes(response.id)}
+            isCompareDisabled={compareLimitReached && !compareSelectedIds.includes(response.id)}
+          />
+        </motion.div>
+      ))}
+    </div>
+  );
+};
+
+const FooterSummary: React.FC<{
+  accepted: number;
+  totalSent: number;
+  pending: number;
+}> = ({ accepted, totalSent, pending }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="bg-slate-50 border border-slate-200 rounded-xl p-6 mt-8"
+  >
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+          <CheckCircle size={16} className="text-green-600" />
+        </div>
+        <div>
+          <h3 className="font-semibold text-slate-900">
+            {accepted} of {totalSent} responses received
+          </h3>
+          <p className="text-sm text-slate-600">
+            {pending > 0 
+              ? `SmartGrant will notify you when all ${pending} remaining responses are in.`
+              : 'All responses have been received.'
+            }
+          </p>
+        </div>
+      </div>
+      
+      <motion.button
+        className="p-2 text-slate-400 hover:text-slate-600 transition-colors"
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        title="Export results"
+      >
+        <Download size={18} />
+      </motion.button>
+    </div>
+  </motion.div>
+);
+
+export const Step6_LiveMatchingDashboard: React.FC<Step6_LiveMatchingDashboardProps> = ({ onBack }) => {
+  const {
+    responses,
+    stats,
+    responseWindow,
+    selectedResponse,
+    setSelectedResponse,
+    refreshData
+  } = useMatchingStore();
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedResponses, setSelectedResponses] = useState<LeadResponse[]>([]);
+  const [isCompareDrawerOpen, setIsCompareDrawerOpen] = useState(false);
+  const MAX_COMPARE = 2;
+
+  // Handler to toggle selection
+  const handleToggleCompareSelect = (response: LeadResponse) => {
+    const isSelected = selectedResponses.some(r => r.id === response.id);
+    if (isSelected) {
+      setSelectedResponses(prev => prev.filter(r => r.id !== response.id));
+    } else if (selectedResponses.length < MAX_COMPARE) {
+      setSelectedResponses(prev => [...prev, response]);
+    } else {
+      toast && toast('Compare 2 at a time for clarity.', { icon: '⚡️' });
+    }
+  };
+  // Clear selected
+  const handleClearCompare = () => setSelectedResponses([]);
+  // Open compare drawer
+  const handleOpenCompare = () => setIsCompareDrawerOpen(true);
+  const handleCloseCompare = () => setIsCompareDrawerOpen(false);
+
+  // Helpers for disable logic
+  const compareLimitReached = selectedResponses.length >= MAX_COMPARE;
+  const compareBarVisible = selectedResponses.length > 0;
+
+  const handleViewSubmission = (response: LeadResponse) => {
+    setSelectedResponse(response);
+  };
+
+  const handleCloseModal = () => {
+    setSelectedResponse(null);
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await refreshData();
+    setTimeout(() => setIsRefreshing(false), 1000);
+  };
+
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      handleRefresh();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const accepted = stats.accepted;
+  const pending = stats.pending;
+  const totalSent = stats.totalSent;
+  const hoursRemaining = responseWindow.hoursRemaining;
+  const isUrgent = hoursRemaining <= 6;
+
+  return (
+    <div className="max-w-4xl mx-auto animate-fade-in pb-20 md:pb-0">
+      <button 
+        onClick={onBack} 
+        className="flex items-center gap-2 mb-6 text-sm font-medium text-indigo-600 hover:text-indigo-700 hover:underline transition-colors"
+      >
+        <ArrowLeft size={16} />Back to Preview & Dispatch
+      </button>
+      
+      <PageHeader 
+        title="Live Matching Dashboard" 
+        subtitle="Monitor responses from vendors and consultants in real-time" 
+      />
+
+      <ProgressBar currentStep={6} totalSteps={6} />
+
+      {/* Response Window Header */}
+      <ResponseWindowHeader
+        totalSent={totalSent}
+        accepted={accepted}
+        pending={pending}
+        hoursRemaining={hoursRemaining}
+        isUrgent={isUrgent}
+      />
+
+      {/* Live Sync Indicator */}
+      <LiveSyncIndicator isRefreshing={isRefreshing} />
+
+      {/* AI Assist Note */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-center text-sm text-slate-500 mb-6"
+      >
+        Responses are auto-ranked for quality and speed.
+      </motion.div>
+
+      {/* Response Feed */}
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold text-slate-900 mb-4">
+          Active Responses
+        </h2>
+        <ResponseFeed
+          responses={responses}
+          onViewSubmission={handleViewSubmission}
+          onCompareSelect={handleToggleCompareSelect}
+          compareSelectedIds={selectedResponses.map(r => r.id)}
+          compareLimitReached={compareLimitReached}
+        />
+      </div>
+
+      {/* Floating Compare Bar */}
+      {compareBarVisible && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
+          className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-30"
+        >
+          <Card className="bg-white shadow-xl border border-slate-200 px-6 py-4 animate-fadeUp">
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                  <span className="text-sm font-bold text-blue-600">{selectedResponses.length}</span>
+                </div>
+                <span className="text-sm font-medium text-slate-700">
+                  Compare selected response{selectedResponses.length > 1 ? 's' : ''}
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleOpenCompare}
+                  className="bg-blue-600 text-white font-medium px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                  disabled={selectedResponses.length < 1}
+                >
+                  Compare
+                </button>
+                <button
+                  onClick={handleClearCompare}
+                  className="bg-slate-100 text-slate-700 font-medium px-4 py-2 rounded-lg hover:bg-slate-200 transition-colors text-sm"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Compare Drawer/Modal */}
+      <Step6CompareDrawer
+        isOpen={isCompareDrawerOpen}
+        onClose={handleCloseCompare}
+        selected={selectedResponses}
+        onProceed={() => {
+          // Optionally mark as "Ready for clarification"
+          setIsCompareDrawerOpen(false);
+          handleClearCompare();
+          toast && toast.success('Marked ready for clarification!');
+        }}
+      />
+
+      {/* Indicative Submission Modal */}
+      <IndicativeSubmissionModal
+        response={selectedResponse}
+        onClose={handleCloseModal}
+      />
+
+      {/* Footer Summary */}
+      <FooterSummary
+        accepted={accepted}
+        totalSent={totalSent}
+        pending={pending}
+      />
+    </div>
+  );
+};
+[Step6_LiveMatchingDashboard.tsx: end]
 
 File: lib/utils.ts
 [utils.ts: start]
@@ -3818,6 +6311,182 @@ export const mockApi = {
 };
 [api.ts: end]
 
+File: mocks/matching.seeds.ts
+[matching.seeds.ts: start]
+import { LeadResponse, MatchingStats, ResponseWindow } from '../state/matching/types';
+
+export const MOCK_LEAD_RESPONSES: LeadResponse[] = [
+  { // 1. Acme ERP (ACCEPTED)
+    id: 'response-1', vendorId: 'acme-erp', type: 'VENDOR', name: 'Acme ERP', logo: '/assets/vendors/acme-erp.svg', status: 'ACCEPTED', qualificationScore: 92, responseTime: 2.5, submittedAt: new Date(Date.now() - 2 * 60 * 60 * 1000), expiresAt: new Date(Date.now() + 22 * 60 * 60 * 1000),
+    indicativeSubmission: { id: 'sub-1', title: 'Cloud ERP Proposal', summary: 'Cloud ERP for F&B. PSG grant ready.', estimatedCost: [20000, 25000], timeline: [3, 4], keyFeatures: ['PSG Pre-approved','Inventory Mgmt','24/7 Support','Training'], nextSteps: ['Requirements','Configuration','UAT','Go-live'], grantTag: 'PSG', tags: ['Fast Deployment','Budget Fit'], breakdown: [{item:'Licence',costBand:[10000,12000]},{item:'Setup',costBand:[7000,8000]},{item:'Support',costBand:[3000,4000]}], grantEligible: true, support: '6-month warranty', addOns: ['API','Custom Reports'] }
+  },
+  { // 2. Nova Cloud (ACCEPTED)
+    id: 'response-2', vendorId: 'nova-cloud', type: 'VENDOR', name: 'Nova Cloud', logo: '/assets/vendors/nova-cloud.svg', status: 'ACCEPTED', qualificationScore: 88, responseTime: 1.4, submittedAt: new Date(Date.now() - 3 * 60 * 60 * 1000), expiresAt: new Date(Date.now() + 20 * 60 * 60 * 1000),
+    indicativeSubmission: { id: 'sub-2', title: 'Digital Marketing Platform', summary: 'Full-funnel marketing, analytics and PSG grant.', estimatedCost: [15000, 20000], timeline: [2, 3], keyFeatures: ['Quick Setup','Analytics','PSG Approved','24/7 Support'], nextSteps: ['Kickoff','Sandbox','Rollout'], grantTag: 'PSG', tags: ['Quick Start','Cloud'], breakdown: [{item:'Platform',costBand:[9000,13000]},{item:'Service',costBand:[6000,7000]}], grantEligible: true, support:'1-year support', addOns: ['Mobile Access'] }
+  },
+  { // 3. TechFlow Systems (PENDING)
+    id: 'response-3', vendorId: 'techflow-systems', type: 'VENDOR', name: 'TechFlow Systems', logo: '/assets/vendors/techflow.svg', status: 'PENDING', qualificationScore: 77, expiresAt: new Date(Date.now() + 16 * 60 * 60 * 1000) 
+  },
+  { // 4. DataWise Analytics (Optional - can be EXPIRED)
+    id: 'response-4', vendorId: 'datawise-analytics', type: 'VENDOR', name: 'DataWise Analytics', logo: '/assets/vendors/datawise.svg', status: 'EXPIRED', qualificationScore: 65, expiresAt: new Date(Date.now() - 2 * 60 * 60 * 1000)
+  },
+  { // 5. CloudScale Solutions (Optional)
+    id: 'response-5', vendorId: 'cloudscale-solutions', type: 'VENDOR', name: 'CloudScale Solutions', logo: '/assets/vendors/cloudscale.svg', status: 'EXPIRED', qualificationScore: 71, expiresAt: new Date(Date.now() - 5 * 60 * 60 * 1000)
+  },
+  // Consultants:
+  { // 6. Carter Advisory (ACCEPTED)
+    id: 'response-6', consultantId: 'carter-advisory', type: 'CONSULTANT', name: 'Carter Advisory', logo: '/assets/consultants/carter.svg', status: 'ACCEPTED', qualificationScore: 95, responseTime: 1.2, submittedAt: new Date(Date.now() - 1.2 * 60 * 60 * 1000), expiresAt: new Date(Date.now() + 22 * 60 * 60 * 1000),
+    indicativeSubmission: { id: 'sub-3', title: 'EDG Grant Plan', summary:'Grant application & strategy for SME digital transformation.', estimatedCost:[8000,12000], timeline:[2,3], keyFeatures:['EDG Ready','Consultant Team','Compliance Support','Claims Handling'], nextSteps:['Consultation','Doc Review','Submission'], grantTag:'EDG', tags:['High Success Rate'], understanding:'Increase online customers through digital strategy.', approachPhases:[{label:'Strategy',weeks:'1-2 wks'},{label:'Implementation',weeks:'4-6 wks'},{label:'Claims',weeks:'2 wks'}], team:[{name:'Alice Carter',role:'Lead'},{name:'Ben Lee',role:'Co-consultant'}], assumptions:['SME provides recent P&L'], breakdown:[], support:'Advisory till grant award.'}
+  },
+  { // 7. Strategic Insights (ACCEPTED)
+    id: 'response-7', consultantId: 'strategic-insights', type: 'CONSULTANT', name: 'Strategic Insights', logo: '/assets/consultants/strategic.svg', status: 'ACCEPTED', qualificationScore: 88, responseTime: 2.0, submittedAt: new Date(Date.now() - 3 * 60 * 60 * 1000), expiresAt: new Date(Date.now() + 19 * 60 * 60 * 1000),
+    indicativeSubmission: { id:'sub-4', title:'Advisory Proposal', summary:'Process redesign and grant planning.', estimatedCost:[9000,13000], timeline:[2,4], keyFeatures:['Grant Specialist','Tech Advisory','Quick Start'], nextSteps:['Strategy Call','Planning','Dok Prep'], grantTag:'EDG', tags:['Process Expert'], understanding:'Increase digital leads via SEO.', approachPhases:[{label:'Plan',weeks:'1 wk'},{label:'Implement',weeks:'2-3 wks'}], team:[{name:'Sara Tan',role:'Lead'},{name:'Ken Wong',role:'Analyst'}], assumptions:['Access to prior grant docs'], breakdown:[], support:'Full submission support.'}
+  },
+  { // 8. Aegis Partners (PENDING)
+    id: 'response-8', consultantId: 'aegis-partners', type: 'CONSULTANT', name: 'Aegis Partners', logo: '/assets/consultants/aegis.svg', status: 'PENDING', qualificationScore: 82, expiresAt: new Date(Date.now() + 17 * 60 * 60 * 1000) 
+  },
+  { // 9. InsightWorks Consulting (New, PENDING)
+    id: 'response-9', consultantId: 'insightworks-consulting', type: 'CONSULTANT', name: 'InsightWorks Consulting', logo: '/assets/consultants/insightworks.svg', status: 'PENDING', qualificationScore: 80, expiresAt: new Date(Date.now() + 16 * 60 * 60 * 1000) 
+  },
+];
+
+export const MOCK_MATCHING_STATS: MatchingStats = {
+  totalSent: 6,
+  accepted: 2,
+  declined: 1,
+  pending: 2,
+  expired: 1,
+  responseRate: 50, // (accepted + declined) / totalSent * 100
+  avgResponseTime: 2.7
+};
+
+export const MOCK_RESPONSE_WINDOW: ResponseWindow = {
+  closesAt: new Date(Date.now() + 20 * 60 * 60 * 1000), // 20 hours from now
+  hoursRemaining: 20,
+  isUrgent: false
+};
+[matching.seeds.ts: end]
+
+File: mocks/preview.seeds.ts
+[preview.seeds.ts: start]
+import { Vendor, Consultant } from '../state/preview/types';
+
+export const MOCK_VENDORS: Vendor[] = [
+  {
+    id: 'acme-erp',
+    name: 'Acme ERP',
+    logo: '/assets/vendors/acme-erp.svg',
+    match: 92,
+    grantTag: 'PSG',
+    sector: 'F&B',
+    product: 'Cloud ERP Suite',
+    costRange: [20000, 25000],
+    duration: [3, 4],
+    reason: 'Your goal = Process Automation (F&B)',
+    tags: ['Fast Deployment', 'Budget Fit', 'Local Support'],
+    selected: true
+  },
+  {
+    id: 'nova-cloud',
+    name: 'Nova Cloud',
+    logo: '/assets/vendors/nova-cloud.svg',
+    match: 88,
+    grantTag: 'PSG',
+    sector: 'Retail',
+    product: 'Digital Marketing Platform',
+    costRange: [15000, 20000],
+    duration: [2, 3],
+    reason: 'Matches your digital transformation goals',
+    tags: ['Quick Setup', 'PSG Approved', '24/7 Support'],
+    selected: true
+  },
+  {
+    id: 'techflow-systems',
+    name: 'TechFlow Systems',
+    logo: '/assets/vendors/techflow.svg',
+    match: 77,
+    grantTag: 'EDG',
+    sector: 'Manufacturing',
+    product: 'IoT Integration Suite',
+    costRange: [30000, 40000],
+    duration: [4, 6],
+    reason: 'Advanced automation for manufacturing',
+    tags: ['Enterprise Grade', 'EDG Eligible', 'Custom Solutions'],
+    selected: false
+  },
+  {
+    id: 'datawise-analytics',
+    name: 'DataWise Analytics',
+    logo: '/assets/vendors/datawise.svg',
+    match: 65,
+    grantTag: 'NON_GRANT',
+    sector: 'Services',
+    product: 'Business Intelligence Platform',
+    costRange: [10000, 15000],
+    duration: [2, 3],
+    reason: 'Data analytics for business insights',
+    tags: ['Cost Effective', 'Easy Integration', 'Self-Service'],
+    selected: false
+  },
+  {
+    id: 'cloudscale-solutions',
+    name: 'CloudScale Solutions',
+    logo: '/assets/vendors/cloudscale.svg',
+    match: 71,
+    grantTag: 'PSG',
+    sector: 'F&B',
+    product: 'Inventory Management System',
+    costRange: [12000, 18000],
+    duration: [2, 4],
+    reason: 'F&B-specific inventory optimization',
+    tags: ['Industry Specific', 'PSG Ready', 'Quick ROI'],
+    selected: false
+  }
+];
+
+export const MOCK_CONSULTANTS: Consultant[] = [
+  {
+    id: 'carter-advisory',
+    name: 'Carter Advisory',
+    logo: '/assets/consultants/carter.svg',
+    match: 88,
+    specialty: 'EDG Specialist',
+    experience: '3 yrs F&B projects',
+    successRate: 92,
+    coreFocus: ['EDG Grant Planning', 'Process Redesign'],
+    rating: 4.8,
+    avgTurnaround: 14,
+    selected: true
+  },
+  {
+    id: 'aegis-partners',
+    name: 'Aegis Partners',
+    logo: '/assets/consultants/aegis.svg',
+    match: 75,
+    specialty: 'PSG Expert',
+    experience: '5 yrs Retail sector',
+    successRate: 87,
+    coreFocus: ['Digital Transformation', 'Vendor Selection'],
+    rating: 4.6,
+    avgTurnaround: 10,
+    selected: false
+  },
+  {
+    id: 'strategic-insights',
+    name: 'Strategic Insights',
+    logo: '/assets/consultants/strategic.svg',
+    match: 69,
+    specialty: 'General Business',
+    experience: '8 yrs cross-industry',
+    successRate: 78,
+    coreFocus: ['Business Strategy', 'Technology Adoption'],
+    rating: 4.3,
+    avgTurnaround: 21,
+    selected: false
+  }
+];
+[preview.seeds.ts: end]
+
 File: mocks/seeds.trhls.ts
 [seeds.trhls.ts: start]
 import { TRHLSOption } from "../state/types";
@@ -3827,7 +6496,7 @@ export const TRHLS_FOR_MARKETING_VISIBILITY: TRHLSOption[] = [
     id: "psg-digital-ads-suite",
     name: "PSG Digital Ads & CRM Suite",
     grantTag: "PSG",
-    whyFit: "Ideal for SMEs improving lead acquisition through digital ads automation.",
+    whyFit: "The perfect launchpad for SMEs wanting not just more leads, but a hands-off, unified approach across digital channels. We’ll bring advanced yet easy-to-use tools for ads, CRM, and analytics—all PSG-grant optimized—so you focus on growth while we handle the campaign science.",
     estCostBand: [20000, 25000],
     estDurationMonths: [3, 4],
     businessImpact: {
@@ -3836,7 +6505,7 @@ export const TRHLS_FOR_MARKETING_VISIBILITY: TRHLSOption[] = [
       cacChangePct: -12,
       timeToFirstLeadWeeks: 3
     },
-    grantWhy: "PSG supports adoption of pre-approved digital marketing and CRM systems for productivity and lead generation.",
+    grantWhy: "PSG supports adoption of pre-approved digital marketing and CRM systems for productivity and lead generation, and we help you maximize these funds at every step.",
     rationaleSignals: ["Industry fit (F&B/Retail)", "Budget within PSG range", "Proven vendors available"]
   },
   {
@@ -4030,9 +6699,9 @@ export const COACH_CONFIG = {
   },
   suggestionTemplates: {
     GROWTH: {
-      coachLine: "Got it — focusing on acquisition and marketing visibility.",
-      text: "We're struggling to attract new customers due to low online visibility. We want to improve our reach through digital marketing (SEO/ads) and website improvements.",
-      rationale: "This helps us match you to vendors who specialise in lead generation and online presence."
+      coachLine: "Absolutely understood — let's zero in on boosting your brand's online presence and simplifying your campaign reporting.",
+      text: "At its heart, your goal is to ensure your brand stands out online, attracting more customers while making campaign tracking far less of a headache. We understand you’re striving for not just increased digital visibility, but also a way to see what’s working in your campaigns — across every platform, all in one place. Our priority is to empower your team with clearer insights and simpler reporting, freeing up your time to focus on actual growth.",
+      rationale: "This approach enables a holistic match to marketing partners who not only drive lead generation, but also take pride in transparent, data-driven campaign outcomes."
     }
   },
   // Category chips to show under chat (auto from domain + clarifier)
@@ -4040,8 +6709,8 @@ export const COACH_CONFIG = {
     GROWTH: ["Growth", "Marketing", "Digital Transformation"]
   },
   reqDocPreview: {
-    problem: "Low visibility and difficulty attracting new customers",
-    goal: "Increase online customer acquisition through digital marketing",
+    problem: "Standing out online is tough, and it can be a real challenge to see which campaigns are actually making a difference. It's frustrating to pour effort (and budget) into digital channels and not get a simple, unified view of what's working.",
+    goal: "Make your brand discoverable, boost your digital growth, and put streamlined, all-in-one campaign tracking in your hands — so you always know where your efforts are paying off.",
     domain: "Growth",
     complexity: "Low",
     industry: "F&B (example)",
@@ -4194,6 +6863,226 @@ export interface ChatMessage {
 }
 [types.ts: end]
 
+File: state/matching/modes.ts
+[modes.ts: start]
+export const MATCHING_MODES = {
+  CONSULTANT_MANAGED: {
+    title: "Consultant-Managed",
+    tagline: "Guided & hands-off — we orchestrate for you.",
+    badges: ["Expert-Guided", "Higher Grant Success"],
+    recommended: true,
+    roles: [
+      { icon: "UserCheck", label: "You Approve" },
+      { icon: "ListChecks", label: "Consultant Shortlists" },
+      { icon: "FileCheck2", label: "Grant Docs Ready" }
+    ],
+    timeline: [
+      { step: "Invite Consultants", icon: "UsersRound" },
+      { step: "Compare Proposals", icon: "ClipboardCheck" },
+      { step: "Select Consultant", icon: "Layers" }
+    ],
+    metrics: {
+      effort: { label: "Your Effort", value: "Low", color: "emerald" },
+      alignment: { label: "Grant Fit", value: "85%", bar: 0.85 },
+      speed: { label: "First Quote", value: "3–5 days" }
+    },
+    note: "Best when approvals and documentation matter.",
+    outcome: "Best when approvals and documentation matter."
+  },
+  SME_SELF_MANAGED: {
+    title: "SME Self-Managed",
+    tagline: "Hands-on & flexible — you drive vendor picks.",
+    badges: ["Full Control", "Faster First Quotes"],
+    recommended: false,
+    roles: [
+      { icon: "Hand", label: "You Pick Vendors" },
+      { icon: "Send", label: "SmartGrant Dispatches" },
+      { icon: "Users", label: "Consultant Optional" }
+    ],
+    timeline: [
+      { step: "Invite Vendors", icon: "Store" },
+      { step: "Receive Quotes", icon: "Inbox" },
+      { step: "Add Consultant", icon: "Heart" }
+    ],
+    metrics: {
+      effort: { label: "Your Effort", value: "Medium", color: "amber" },
+      alignment: { label: "Grant Fit", value: "65%", bar: 0.65 },
+      speed: { label: "First Quote", value: "2–4 days" }
+    },
+    note: "Best when you want speed and control.",
+    outcome: "Best when you want speed and control."
+  }
+} as const;
+[modes.ts: end]
+
+File: state/matching/recommendation.ts
+[recommendation.ts: start]
+import { ReqDoc } from '../types';
+
+export const getSmartRecommendation = (reqDoc: ReqDoc | null) => {
+  if (!reqDoc) {
+    return {
+      recommended: 'CONSULTANT_MANAGED' as const,
+      reason: 'Default recommendation for guided experience.',
+      bannerText: 'Recommended for your timeline and grant paperwork needs — structured guidance, higher approval confidence.',
+      tooltipText: 'Grant submissions often need scoped plans, evidence and checklists. Consultants shorten that cycle.'
+    };
+  }
+
+  const { grantRelevant, timelineMonths, complexity } = reqDoc;
+  const timeline = timelineMonths[0]; // Use minimum timeline
+
+  // Heuristics
+  const isLongTimeline = timeline >= 3;
+  const isHighComplexity = complexity === 'HIGH';
+  const hasGrantRequirements = grantRelevant === true;
+
+  if (hasGrantRequirements && (isLongTimeline || isHighComplexity)) {
+    return {
+      recommended: 'CONSULTANT_MANAGED' as const,
+      reason: 'Grant requirements with longer timeline or high complexity benefit from consultant guidance.',
+      bannerText: 'Recommended for your timeline and grant paperwork needs — structured guidance, higher approval confidence.',
+      tooltipText: 'Grant submissions often need scoped plans, evidence and checklists. Consultants shorten that cycle.'
+    };
+  }
+
+  if (!hasGrantRequirements || timeline <= 2) {
+    return {
+      recommended: 'SME_SELF_MANAGED' as const,
+      reason: 'Short timeline or no grant requirements favor direct vendor approach.',
+      bannerText: 'Recommended for your short timeline — get vendor quotes faster with full control.',
+      tooltipText: 'When grants are optional or light, direct vendor shortlisting gets you quotes quicker.'
+    };
+  }
+
+  // Default fallback
+  return {
+    recommended: 'CONSULTANT_MANAGED' as const,
+    reason: 'Default recommendation for guided experience.',
+    bannerText: 'Recommended for your timeline and grant paperwork needs — structured guidance, higher approval confidence.',
+    tooltipText: 'Grant submissions often need scoped plans, evidence and checklists. Consultants shorten that cycle.'
+  };
+};
+[recommendation.ts: end]
+
+File: state/matching/store.ts
+[store.ts: start]
+import { create } from 'zustand';
+import { LeadResponse, MatchingStats, ResponseWindow } from './types';
+import { MOCK_LEAD_RESPONSES, MOCK_MATCHING_STATS, MOCK_RESPONSE_WINDOW } from '../../mocks/matching.seeds';
+
+interface MatchingStore {
+  responses: LeadResponse[];
+  stats: MatchingStats;
+  responseWindow: ResponseWindow;
+  selectedResponse: LeadResponse | null;
+  setSelectedResponse: (response: LeadResponse | null) => void;
+  updateResponseStatus: (responseId: string, status: LeadResponse['status']) => void;
+  refreshData: () => void;
+}
+
+export const useMatchingStore = create<MatchingStore>((set, get) => ({
+  responses: MOCK_LEAD_RESPONSES,
+  stats: MOCK_MATCHING_STATS,
+  responseWindow: MOCK_RESPONSE_WINDOW,
+  selectedResponse: null,
+
+  setSelectedResponse: (response: LeadResponse | null) => {
+    set({ selectedResponse: response });
+  },
+
+  updateResponseStatus: (responseId: string, status: LeadResponse['status']) => {
+    set((state) => {
+      const responses = state.responses.map(response =>
+        response.id === responseId ? { ...response, status } : response
+      );
+      
+      // Recalculate stats
+      const accepted = responses.filter(r => r.status === 'ACCEPTED').length;
+      const declined = responses.filter(r => r.status === 'DECLINED').length;
+      const pending = responses.filter(r => r.status === 'PENDING').length;
+      const expired = responses.filter(r => r.status === 'EXPIRED').length;
+      const totalSent = responses.length;
+      
+      const stats: MatchingStats = {
+        totalSent,
+        accepted,
+        declined,
+        pending,
+        expired,
+        responseRate: totalSent > 0 ? Math.round(((accepted + declined) / totalSent) * 100) : 0,
+        avgResponseTime: 2.7 // Mock value
+      };
+
+      return { responses, stats };
+    });
+  },
+
+  refreshData: () => {
+    // In a real app, this would fetch fresh data from the API
+    set({
+      responses: MOCK_LEAD_RESPONSES,
+      stats: MOCK_MATCHING_STATS,
+      responseWindow: MOCK_RESPONSE_WINDOW
+    });
+  }
+}));
+[store.ts: end]
+
+File: state/matching/types.ts
+[types.ts: start]
+export interface LeadResponse {
+  id: string;
+  vendorId?: string;
+  consultantId?: string;
+  type: 'VENDOR' | 'CONSULTANT';
+  name: string;
+  logo: string;
+  status: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'EXPIRED';
+  qualificationScore: number;
+  responseTime?: number; // hours
+  submittedAt?: Date;
+  expiresAt: Date;
+  indicativeSubmission?: {
+    id: string;
+    title: string;
+    summary: string;
+    estimatedCost: [number, number];
+    timeline: [number, number];
+    keyFeatures: string[];
+    nextSteps: string[];
+    // New optional, structured fields for the 1-Page Confidence Snapshot
+    grantTag?: 'PSG' | 'EDG' | 'NON_GRANT';
+    tags?: string[]; // e.g., High Success Rate, Fast Turnaround
+    understanding?: string; // consultant: paraphrase of SME goal
+    approachPhases?: { label: string; weeks: string; icon?: string }[]; // consultant phases
+    team?: { name: string; role: string; avatarUrl?: string }[]; // consultant team
+    similarProjects?: { sector: string; result: string }[]; // consultant social proof
+    assumptions?: string[]; // dependencies/assumptions list
+    breakdown?: { item: string; costBand?: [number, number] }[]; // vendor items
+    grantEligible?: boolean; // vendor grant applicability
+    support?: string; // vendor support/warranty
+    addOns?: string[]; // vendor optional add-ons
+  };
+}
+
+export interface MatchingStats {
+  totalSent: number;
+  accepted: number;
+  declined: number;
+  pending: number;
+  expired: number;
+  responseRate: number;
+  avgResponseTime: number;
+}
+
+export interface ResponseWindow {
+  closesAt: Date;
+  hoursRemaining: number;
+  isUrgent: boolean;
+}
+[types.ts: end]
+
 File: state/opportunity/uiHints.ts
 [uiHints.ts: start]
 import { ReqDoc } from '../types';
@@ -4241,6 +7130,155 @@ export const MODE_COPY = {
   }
 } as const;
 [uiHints.ts: end]
+
+File: state/preview/store.ts
+[store.ts: start]
+import { create } from 'zustand';
+import { Vendor, Consultant, PreviewState } from './types';
+import { MOCK_VENDORS, MOCK_CONSULTANTS } from '../../mocks/preview.seeds';
+
+interface PreviewStore extends PreviewState {
+  toggleVendor: (id: string) => void;
+  toggleConsultant: (id: string) => void;
+  setVisibility: (visibility: 'PRIVATE' | 'LIMITED' | 'PUBLIC') => void;
+  addVendor: (id: string) => void;
+  addConsultant: (id: string) => void;
+  reset: () => void;
+}
+
+export const usePreviewStore = create<PreviewStore>((set, get) => ({
+  vendors: MOCK_VENDORS,
+  consultants: MOCK_CONSULTANTS,
+  visibility: 'LIMITED',
+  totalSelected: 0,
+  vendorCount: 0,
+  consultantCount: 0,
+
+  toggleVendor: (id: string) => {
+    set((state) => {
+      const vendors = state.vendors.map(vendor =>
+        vendor.id === id ? { ...vendor, selected: !vendor.selected } : vendor
+      );
+      const vendorCount = vendors.filter(v => v.selected).length;
+      const consultantCount = state.consultants.filter(c => c.selected).length;
+      
+      return {
+        vendors,
+        vendorCount,
+        consultantCount,
+        totalSelected: vendorCount + consultantCount
+      };
+    });
+  },
+
+  toggleConsultant: (id: string) => {
+    set((state) => {
+      const consultants = state.consultants.map(consultant =>
+        consultant.id === id ? { ...consultant, selected: !consultant.selected } : consultant
+      );
+      const vendorCount = state.vendors.filter(v => v.selected).length;
+      const consultantCount = consultants.filter(c => c.selected).length;
+      
+      return {
+        consultants,
+        vendorCount,
+        consultantCount,
+        totalSelected: vendorCount + consultantCount
+      };
+    });
+  },
+
+  addVendor: (id: string) => {
+    set((state) => {
+      const vendors = state.vendors.map(vendor =>
+        vendor.id === id ? { ...vendor, selected: true } : vendor
+      );
+      const vendorCount = vendors.filter(v => v.selected).length;
+      const consultantCount = state.consultants.filter(c => c.selected).length;
+      
+      return {
+        vendors,
+        vendorCount,
+        consultantCount,
+        totalSelected: vendorCount + consultantCount
+      };
+    });
+  },
+
+  addConsultant: (id: string) => {
+    set((state) => {
+      const consultants = state.consultants.map(consultant =>
+        consultant.id === id ? { ...consultant, selected: true } : consultant
+      );
+      const vendorCount = state.vendors.filter(v => v.selected).length;
+      const consultantCount = consultants.filter(c => c.selected).length;
+      
+      return {
+        consultants,
+        vendorCount,
+        consultantCount,
+        totalSelected: vendorCount + consultantCount
+      };
+    });
+  },
+
+  setVisibility: (visibility: 'PRIVATE' | 'LIMITED' | 'PUBLIC') => {
+    set({ visibility });
+  },
+
+  reset: () => {
+    set({
+      vendors: MOCK_VENDORS,
+      consultants: MOCK_CONSULTANTS,
+      visibility: 'LIMITED',
+      totalSelected: 0,
+      vendorCount: 0,
+      consultantCount: 0
+    });
+  }
+}));
+[store.ts: end]
+
+File: state/preview/types.ts
+[types.ts: start]
+export interface Vendor {
+  id: string;
+  name: string;
+  logo: string;
+  match: number;
+  grantTag: 'PSG' | 'EDG' | 'NON_GRANT';
+  sector: string;
+  product: string;
+  costRange: [number, number];
+  duration: [number, number];
+  reason: string;
+  tags: string[];
+  selected: boolean;
+}
+
+export interface Consultant {
+  id: string;
+  name: string;
+  logo: string;
+  match: number;
+  specialty: string;
+  experience: string;
+  successRate: number;
+  coreFocus: string[];
+  rating: number;
+  avgTurnaround: number;
+  selected: boolean;
+}
+
+export interface PreviewState {
+  vendors: Vendor[];
+  consultants: Consultant[];
+  visibility: 'PRIVATE' | 'LIMITED' | 'PUBLIC';
+  totalSelected: number;
+  vendorCount: number;
+  consultantCount: number;
+}
+[types.ts: end]
 
 File: state/store.ts
 [store.ts: start]

@@ -99,8 +99,8 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({ reqDocId, onBack
     {
       id: 'prop-1',
       name: 'Acme ERP Solutions',
-      type: 'Vendor Proposal',
-      summary: 'Comprehensive cloud ERP implementation with 24/7 support and training.',
+      type: 'Vendor Submission',
+      summary: `Imagine having every part of your F&B business—inventory, finance, reporting and more—connected in one place. This cloud ERP solution isn’t just about software, it’s about simplifying and elevating your day-to-day so you can focus on growth. We guide you every step, ensuring PSG grant optimization and a successful roll-out, with a dedicated support team that understands the F&B sector inside out.`,
       timeline: '3-4 months',
       price: 'S$22,000 - S$25,000',
       features: ['PSG Pre-approved', 'F&B Industry Experience', '24/7 Support', 'Training Included'],
@@ -109,7 +109,7 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({ reqDocId, onBack
     {
       id: 'prop-2',
       name: 'Nova Cloud Systems',
-      type: 'Vendor Proposal',
+      type: 'Vendor Submission',
       summary: 'Modern cloud-native ERP with advanced analytics and mobile access.',
       timeline: '2-3 months',
       price: 'S$18,000 - S$22,000',
@@ -118,9 +118,9 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({ reqDocId, onBack
     },
     {
       id: 'prop-3',
-      name: 'Carter Advisory',
-      type: 'Consultant Proposal',
-      summary: 'End-to-end grant application support with vendor management and compliance.',
+      name: 'Carter Advisory Group',
+      type: 'Consultant Submission',
+      summary: `Our team provides hands-on support through your grant journey—clarifying requirements, preparing documentation, liaising with vendors, and ensuring nothing falls through the cracks. We’re here to give you confidence, insight and clarity on your F&B digitalization initiatives, from eligibility to claim—so you always know what’s next and how to maximise grant outcomes for your business.`,
       timeline: '4-6 months',
       price: 'S$8,000 - S$12,000',
       features: ['Grant Application', 'Vendor Management', 'Compliance Support', '92% Success Rate'],

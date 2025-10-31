@@ -14,6 +14,10 @@ import { LeadResponse } from '../../state/matching/types';
 interface LiveResponseCardProps {
   response: LeadResponse;
   onViewSubmission: (response: LeadResponse) => void;
+  // Add new props:
+  onCompareSelect?: (response: LeadResponse) => void;
+  isCompareSelected?: boolean;
+  isCompareDisabled?: boolean;
 }
 
 const getStatusConfig = (status: LeadResponse['status']) => {
@@ -64,7 +68,10 @@ const getTypeConfig = (type: LeadResponse['type']) => {
 
 export const LiveResponseCard: React.FC<LiveResponseCardProps> = ({ 
   response, 
-  onViewSubmission 
+  onViewSubmission, 
+  onCompareSelect,
+  isCompareSelected = false,
+  isCompareDisabled = false,
 }) => {
   const statusConfig = getStatusConfig(response.status);
   const typeConfig = getTypeConfig(response.type);
@@ -98,8 +105,25 @@ export const LiveResponseCard: React.FC<LiveResponseCardProps> = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ scale: 1.01 }}
-      className="bg-white border border-slate-200 rounded-xl p-5 hover:border-slate-300 transition-all duration-200"
+      className={`bg-white border border-slate-200 rounded-xl p-5 hover:border-slate-300 transition-all duration-200 relative`}
     >
+      {/* --- NEW: Compare Select Pill --- */}
+      <div className="absolute top-3 right-4 z-10 flex gap-2 items-center">
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); onCompareSelect && onCompareSelect(response); }}
+          disabled={isCompareDisabled}
+          className={
+            `transition-all text-xs font-semibold px-3 py-1 rounded-full
+            border-2 ${isCompareSelected ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-200 bg-slate-50 text-slate-600'}
+            ${isCompareDisabled ? 'opacity-60 pointer-events-none' : 'hover:border-blue-400'}
+            shadow-sm`
+          }
+        >
+          {isCompareSelected ? '✓ Selected' : '☑︎ Select to compare'}
+        </button>
+      </div>
+      {/* --- END NEW --- */}
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">

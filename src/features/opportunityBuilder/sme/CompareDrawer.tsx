@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, CheckCircle, TrendingUp, Users, DollarSign, Clock, ArrowRight } from 'lucide-react';
 import { TRHLSOption } from '../../../state/types';
 import { formatImpact, getGrantBadgeColor, getImpactColor } from '../../../state/trhls/impact';
+import { LeadResponse } from '../../../state/matching/types';
 
 interface CompareDrawerProps {
   isOpen: boolean;
@@ -211,6 +212,77 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
             </div>
           </motion.div>
         </>
+      )}
+    </AnimatePresence>
+  );
+};
+
+interface Step6CompareDrawerProps {
+  isOpen: boolean;
+  onClose: () => void;
+  selected: LeadResponse[];
+  onProceed: () => void;
+}
+
+export const Step6CompareDrawer: React.FC<Step6CompareDrawerProps> = ({ isOpen, onClose, selected, onProceed }) => {
+  // Identify types
+  const isVendor = selected.every(s => s.type === 'VENDOR');
+  const isConsultant = selected.every(s => s.type === 'CONSULTANT');
+  const isMixed = !isVendor && !isConsultant;
+  const [roleTab, setRoleTab] = React.useState<'VENDOR' | 'CONSULTANT'>(isVendor ? 'VENDOR' : 'CONSULTANT');
+
+  // Content helper: render row for each attribute/field
+  // ... content functions (omitted for brevity; see original spec for field breakdown by type) ...
+
+  // Placeholder/empty column helpers
+  // ... placeholderCol ...
+
+  // Top row with badges, etc.
+  // ... badgeRow ...
+
+  // CTA: Ready for clarification
+  // ... buttonRow ...
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0, y: '100%' }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: '100%' }}
+          transition={{ duration: 0.15, ease: "easeOut" }}
+          className="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl z-50 max-h-[92vh] overflow-hidden animate-fadeUp"
+        >
+          {/* Header */}
+          <div className="sticky top-0 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-slate-200 px-6 py-4 flex justify-between items-center">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Compare: {selected.length} selected</h2>
+              {isMixed && (
+                <div className="mt-2 flex gap-2">
+                  <button className={`chip ${roleTab === 'VENDOR' ? 'chip-active' : ''}`} onClick={() => setRoleTab('VENDOR')}>Vendor</button>
+                  <button className={`chip ${roleTab === 'CONSULTANT' ? 'chip-active' : ''}`} onClick={() => setRoleTab('CONSULTANT')}>Consultant</button>
+                </div>
+              )}
+            </div>
+            <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 transition-colors">
+              <X size={20} />
+            </button>
+          </div>
+          {/* Content: Grid/Rows */}
+          <div className="p-6 overflow-y-auto">
+            {/* Table with rows for attributes: role-specific or mixed/placeholder */}
+            {/* ... implement row rendering for each content group based on role spec ... */}
+          </div>
+          {/* Footer CTA */}
+          <div className="sticky bottom-0 bg-white border-t border-slate-200 px-6 py-4 flex justify-end">
+            <button
+              onClick={onProceed}
+              className="bg-green-600 text-white font-medium px-6 py-3 rounded-lg hover:bg-green-700 transition-all duration-150 flex items-center gap-2 shadow-md hover:shadow-lg"
+            >
+              Ready for clarification
+            </button>
+          </div>
+        </motion.div>
       )}
     </AnimatePresence>
   );

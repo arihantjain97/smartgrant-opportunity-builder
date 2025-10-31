@@ -5,7 +5,7 @@ export const TRHLS_FOR_MARKETING_VISIBILITY: TRHLSOption[] = [
     id: "psg-digital-ads-suite",
     name: "PSG Digital Ads & CRM Suite",
     grantTag: "PSG",
-    whyFit: "Ideal for SMEs improving lead acquisition through digital ads automation.",
+    whyFit: "The perfect launchpad for SMEs wanting not just more leads, but a hands-off, unified approach across digital channels. We’ll bring advanced yet easy-to-use tools for ads, CRM, and analytics—all PSG-grant optimized—so you focus on growth while we handle the campaign science.",
     estCostBand: [20000, 25000],
     estDurationMonths: [3, 4],
     businessImpact: {
@@ -14,7 +14,7 @@ export const TRHLS_FOR_MARKETING_VISIBILITY: TRHLSOption[] = [
       cacChangePct: -12,
       timeToFirstLeadWeeks: 3
     },
-    grantWhy: "PSG supports adoption of pre-approved digital marketing and CRM systems for productivity and lead generation.",
+    grantWhy: "PSG supports adoption of pre-approved digital marketing and CRM systems for productivity and lead generation, and we help you maximize these funds at every step.",
     rationaleSignals: ["Industry fit (F&B/Retail)", "Budget within PSG range", "Proven vendors available"]
   },
   {

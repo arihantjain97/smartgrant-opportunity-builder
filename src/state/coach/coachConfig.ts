@@ -15,9 +15,9 @@ export const COACH_CONFIG = {
   },
   suggestionTemplates: {
     GROWTH: {
-      coachLine: "Got it — focusing on acquisition and marketing visibility.",
-      text: "We're struggling to attract new customers due to low online visibility. We want to improve our reach through digital marketing (SEO/ads) and website improvements.",
-      rationale: "This helps us match you to vendors who specialise in lead generation and online presence."
+      coachLine: "Absolutely understood — let's zero in on boosting your brand's online presence and simplifying your campaign reporting.",
+      text: "At its heart, your goal is to ensure your brand stands out online, attracting more customers while making campaign tracking far less of a headache. We understand you’re striving for not just increased digital visibility, but also a way to see what’s working in your campaigns — across every platform, all in one place. Our priority is to empower your team with clearer insights and simpler reporting, freeing up your time to focus on actual growth.",
+      rationale: "This approach enables a holistic match to marketing partners who not only drive lead generation, but also take pride in transparent, data-driven campaign outcomes."
     }
   },
   // Category chips to show under chat (auto from domain + clarifier)
@@ -25,8 +25,8 @@ export const COACH_CONFIG = {
     GROWTH: ["Growth", "Marketing", "Digital Transformation"]
   },
   reqDocPreview: {
-    problem: "Low visibility and difficulty attracting new customers",
-    goal: "Increase online customer acquisition through digital marketing",
+    problem: "Standing out online is tough, and it can be a real challenge to see which campaigns are actually making a difference. It's frustrating to pour effort (and budget) into digital channels and not get a simple, unified view of what's working.",
+    goal: "Make your brand discoverable, boost your digital growth, and put streamlined, all-in-one campaign tracking in your hands — so you always know where your efforts are paying off.",
     domain: "Growth",
     complexity: "Low",
     industry: "F&B (example)",

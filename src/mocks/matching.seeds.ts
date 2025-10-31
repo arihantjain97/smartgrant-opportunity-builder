@@ -1,140 +1,38 @@
 import { LeadResponse, MatchingStats, ResponseWindow } from '../state/matching/types';
 
 export const MOCK_LEAD_RESPONSES: LeadResponse[] = [
-  {
-    id: 'response-1',
-    vendorId: 'acme-erp',
-    type: 'VENDOR',
-    name: 'Acme ERP Solutions',
-    logo: '/assets/vendors/acme-erp.svg',
-    status: 'ACCEPTED',
-    qualificationScore: 92,
-    responseTime: 2.5,
-    submittedAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-    expiresAt: new Date(Date.now() + 22 * 60 * 60 * 1000), // 22 hours from now
-    indicativeSubmission: {
-      id: 'sub-1',
-      title: 'Cloud ERP Implementation Proposal',
-      summary: 'Comprehensive ERP solution tailored for F&B sector with PSG grant optimization',
-      estimatedCost: [18000, 22000],
-      timeline: [3, 4],
-      keyFeatures: [
-        'Inventory Management System',
-        'Financial Reporting Suite',
-        'PSG Grant Application Support',
-        '24/7 Technical Support'
-      ],
-      nextSteps: [
-        'Detailed requirements analysis',
-        'Custom configuration setup',
-        'User training program',
-        'Go-live support'
-      ],
-      grantTag: 'PSG',
-      tags: ['Budget Fit', 'Fast Deployment'],
-      breakdown: [
-        { item: 'ERP Software Licence', costBand: [9000, 11000] },
-        { item: 'Onboarding & Setup', costBand: [6000, 8000] },
-        { item: '6-Month Support', costBand: [3000, 4000] }
-      ],
-      grantEligible: true,
-      support: 'Includes 6-month support and on-site training.',
-      addOns: ['Data migration', 'API integration']
-    }
+  { // 1. Acme ERP (ACCEPTED)
+    id: 'response-1', vendorId: 'acme-erp', type: 'VENDOR', name: 'Acme ERP', logo: '/assets/vendors/acme-erp.svg', status: 'ACCEPTED', qualificationScore: 92, responseTime: 2.5, submittedAt: new Date(Date.now() - 2 * 60 * 60 * 1000), expiresAt: new Date(Date.now() + 22 * 60 * 60 * 1000),
+    indicativeSubmission: { id: 'sub-1', title: 'Cloud ERP Proposal', summary: 'Cloud ERP for F&B. PSG grant ready.', estimatedCost: [20000, 25000], timeline: [3, 4], keyFeatures: ['PSG Pre-approved','Inventory Mgmt','24/7 Support','Training'], nextSteps: ['Requirements','Configuration','UAT','Go-live'], grantTag: 'PSG', tags: ['Fast Deployment','Budget Fit'], breakdown: [{item:'Licence',costBand:[10000,12000]},{item:'Setup',costBand:[7000,8000]},{item:'Support',costBand:[3000,4000]}], grantEligible: true, support: '6-month warranty', addOns: ['API','Custom Reports'] }
   },
-  {
-    id: 'response-2',
-    vendorId: 'nova-cloud',
-    type: 'VENDOR',
-    name: 'Nova Cloud Technologies',
-    logo: '/assets/vendors/nova-cloud.svg',
-    status: 'PENDING',
-    qualificationScore: 88,
-    expiresAt: new Date(Date.now() + 18 * 60 * 60 * 1000), // 18 hours from now
+  { // 2. Nova Cloud (ACCEPTED)
+    id: 'response-2', vendorId: 'nova-cloud', type: 'VENDOR', name: 'Nova Cloud', logo: '/assets/vendors/nova-cloud.svg', status: 'ACCEPTED', qualificationScore: 88, responseTime: 1.4, submittedAt: new Date(Date.now() - 3 * 60 * 60 * 1000), expiresAt: new Date(Date.now() + 20 * 60 * 60 * 1000),
+    indicativeSubmission: { id: 'sub-2', title: 'Digital Marketing Platform', summary: 'Full-funnel marketing, analytics and PSG grant.', estimatedCost: [15000, 20000], timeline: [2, 3], keyFeatures: ['Quick Setup','Analytics','PSG Approved','24/7 Support'], nextSteps: ['Kickoff','Sandbox','Rollout'], grantTag: 'PSG', tags: ['Quick Start','Cloud'], breakdown: [{item:'Platform',costBand:[9000,13000]},{item:'Service',costBand:[6000,7000]}], grantEligible: true, support:'1-year support', addOns: ['Mobile Access'] }
   },
-  {
-    id: 'response-3',
-    consultantId: 'carter-advisory',
-    type: 'CONSULTANT',
-    name: 'Carter Advisory Group',
-    logo: '/assets/consultants/carter.svg',
-    status: 'ACCEPTED',
-    qualificationScore: 95,
-    responseTime: 1.2,
-    submittedAt: new Date(Date.now() - 1.2 * 60 * 60 * 1000), // 1.2 hours ago
-    expiresAt: new Date(Date.now() + 22.8 * 60 * 60 * 1000), // 22.8 hours from now
-    indicativeSubmission: {
-      id: 'sub-2',
-      title: 'EDG Grant Strategy & Implementation Plan',
-      summary: 'Expert guidance for EDG grant application with proven track record in F&B sector',
-      estimatedCost: [8000, 12000],
-      timeline: [2, 3],
-      keyFeatures: [
-        'Grant Application Strategy',
-        'Documentation Preparation',
-        'Government Liaison',
-        'Project Management Support'
-      ],
-      nextSteps: [
-        'Initial consultation call',
-        'Grant application review',
-        'Documentation preparation',
-        'Submission support'
-      ],
-      grantTag: 'EDG',
-      tags: ['High Success Rate', 'Fast Turnaround'],
-      understanding: 'You aim to improve online visibility and streamline campaign reporting across channels.',
-      approachPhases: [
-        { label: 'Diagnostic', weeks: '1–2 wks', icon: 'Search' },
-        { label: 'Implementation', weeks: '4–6 wks', icon: 'Settings' },
-        { label: 'Reporting & Claims', weeks: '2 wks', icon: 'FileCheck2' }
-      ],
-      team: [
-        { name: 'Alice Carter', role: 'Lead Consultant' },
-        { name: 'Ben Lee', role: 'Senior Analyst' }
-      ],
-      similarProjects: [
-        { sector: 'F&B Retailer', result: '30% faster EDG approval' },
-        { sector: 'Services SME', result: 'Improved claims documentation quality' }
-      ],
-      assumptions: [
-        'Assumes vendor stack provides campaign analytics API',
-        'Assumes SME can provide last 6 months of campaign data'
-      ]
-    }
+  { // 3. TechFlow Systems (PENDING)
+    id: 'response-3', vendorId: 'techflow-systems', type: 'VENDOR', name: 'TechFlow Systems', logo: '/assets/vendors/techflow.svg', status: 'PENDING', qualificationScore: 77, expiresAt: new Date(Date.now() + 16 * 60 * 60 * 1000) 
   },
-  {
-    id: 'response-4',
-    vendorId: 'techflow-systems',
-    type: 'VENDOR',
-    name: 'TechFlow Systems',
-    logo: '/assets/vendors/techflow.svg',
-    status: 'DECLINED',
-    qualificationScore: 77,
-    responseTime: 4.5,
-    submittedAt: new Date(Date.now() - 4.5 * 60 * 60 * 1000), // 4.5 hours ago
-    expiresAt: new Date(Date.now() + 19.5 * 60 * 60 * 1000), // 19.5 hours from now
+  { // 4. DataWise Analytics (Optional - can be EXPIRED)
+    id: 'response-4', vendorId: 'datawise-analytics', type: 'VENDOR', name: 'DataWise Analytics', logo: '/assets/vendors/datawise.svg', status: 'EXPIRED', qualificationScore: 65, expiresAt: new Date(Date.now() - 2 * 60 * 60 * 1000)
   },
-  {
-    id: 'response-5',
-    consultantId: 'aegis-partners',
-    type: 'CONSULTANT',
-    name: 'Aegis Partners',
-    logo: '/assets/consultants/aegis.svg',
-    status: 'PENDING',
-    qualificationScore: 82,
-    expiresAt: new Date(Date.now() + 16 * 60 * 60 * 1000), // 16 hours from now
+  { // 5. CloudScale Solutions (Optional)
+    id: 'response-5', vendorId: 'cloudscale-solutions', type: 'VENDOR', name: 'CloudScale Solutions', logo: '/assets/vendors/cloudscale.svg', status: 'EXPIRED', qualificationScore: 71, expiresAt: new Date(Date.now() - 5 * 60 * 60 * 1000)
   },
-  {
-    id: 'response-6',
-    vendorId: 'datawise-analytics',
-    type: 'VENDOR',
-    name: 'DataWise Analytics',
-    logo: '/assets/vendors/datawise.svg',
-    status: 'EXPIRED',
-    qualificationScore: 65,
-    expiresAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-  }
+  // Consultants:
+  { // 6. Carter Advisory (ACCEPTED)
+    id: 'response-6', consultantId: 'carter-advisory', type: 'CONSULTANT', name: 'Carter Advisory', logo: '/assets/consultants/carter.svg', status: 'ACCEPTED', qualificationScore: 95, responseTime: 1.2, submittedAt: new Date(Date.now() - 1.2 * 60 * 60 * 1000), expiresAt: new Date(Date.now() + 22 * 60 * 60 * 1000),
+    indicativeSubmission: { id: 'sub-3', title: 'EDG Grant Plan', summary:'Grant application & strategy for SME digital transformation.', estimatedCost:[8000,12000], timeline:[2,3], keyFeatures:['EDG Ready','Consultant Team','Compliance Support','Claims Handling'], nextSteps:['Consultation','Doc Review','Submission'], grantTag:'EDG', tags:['High Success Rate'], understanding:'Increase online customers through digital strategy.', approachPhases:[{label:'Strategy',weeks:'1-2 wks'},{label:'Implementation',weeks:'4-6 wks'},{label:'Claims',weeks:'2 wks'}], team:[{name:'Alice Carter',role:'Lead'},{name:'Ben Lee',role:'Co-consultant'}], assumptions:['SME provides recent P&L'], breakdown:[], support:'Advisory till grant award.'}
+  },
+  { // 7. Strategic Insights (ACCEPTED)
+    id: 'response-7', consultantId: 'strategic-insights', type: 'CONSULTANT', name: 'Strategic Insights', logo: '/assets/consultants/strategic.svg', status: 'ACCEPTED', qualificationScore: 88, responseTime: 2.0, submittedAt: new Date(Date.now() - 3 * 60 * 60 * 1000), expiresAt: new Date(Date.now() + 19 * 60 * 60 * 1000),
+    indicativeSubmission: { id:'sub-4', title:'Advisory Proposal', summary:'Process redesign and grant planning.', estimatedCost:[9000,13000], timeline:[2,4], keyFeatures:['Grant Specialist','Tech Advisory','Quick Start'], nextSteps:['Strategy Call','Planning','Dok Prep'], grantTag:'EDG', tags:['Process Expert'], understanding:'Increase digital leads via SEO.', approachPhases:[{label:'Plan',weeks:'1 wk'},{label:'Implement',weeks:'2-3 wks'}], team:[{name:'Sara Tan',role:'Lead'},{name:'Ken Wong',role:'Analyst'}], assumptions:['Access to prior grant docs'], breakdown:[], support:'Full submission support.'}
+  },
+  { // 8. Aegis Partners (PENDING)
+    id: 'response-8', consultantId: 'aegis-partners', type: 'CONSULTANT', name: 'Aegis Partners', logo: '/assets/consultants/aegis.svg', status: 'PENDING', qualificationScore: 82, expiresAt: new Date(Date.now() + 17 * 60 * 60 * 1000) 
+  },
+  { // 9. InsightWorks Consulting (New, PENDING)
+    id: 'response-9', consultantId: 'insightworks-consulting', type: 'CONSULTANT', name: 'InsightWorks Consulting', logo: '/assets/consultants/insightworks.svg', status: 'PENDING', qualificationScore: 80, expiresAt: new Date(Date.now() + 16 * 60 * 60 * 1000) 
+  },
 ];
 
 export const MOCK_MATCHING_STATS: MatchingStats = {

@@ -55,38 +55,21 @@ const ShortlistCard: React.FC<{
 
 export const Step5_PreviewAndDispatch: React.FC<Step5_PreviewAndDispatchProps> = ({ onNext, onBack }) => {
   const { currentReqDocId } = useAppStore();
-  const [selectedVendors, setSelectedVendors] = useState<string[]>(['Acme ERP', 'Nova Cloud']);
-  const [selectedConsultants, setSelectedConsultants] = useState<string[]>(['Carter Advisory']);
+  const [selectedVendors, setSelectedVendors] = useState<string[]>(vendors.map(v=>v.name).slice(0,3));
+  const [selectedConsultants, setSelectedConsultants] = useState<string[]>(consultants.map(c=>c.name).slice(0,3));
 
   const vendors = [
-    {
-      name: 'Acme ERP',
-      badges: ['Top Match', 'Budget Fit'],
-      whyMatched: 'PSG pre-approved • 3 case studies in F&B • Fast deployment'
-    },
-    {
-      name: 'Nova Cloud',
-      badges: ['Fastest Deploy', 'Good Support'],
-      whyMatched: 'Cloud-native solution • Strong SG/MY support • Competitive pricing'
-    },
-    {
-      name: 'TechFlow Systems',
-      badges: ['Enterprise Grade'],
-      whyMatched: 'Large-scale implementations • 24/7 support • Custom integrations'
-    }
+    { name: 'Acme ERP', badges: ['Top Match', 'Budget Fit'], whyMatched: 'PSG pre-approved • 3 F&B case studies • Fast deployment' },
+    { name: 'Nova Cloud', badges: ['Fastest Deploy', 'Analytics'], whyMatched: 'Cloud native • Analytics • PSG Approved' },
+    { name: 'TechFlow Systems', badges: ['Enterprise Grade'], whyMatched: 'Manufacturing/IoT specialist • EDG eligible' },
+    { name: 'DataWise Analytics', badges: ['Cost Effective'], whyMatched: 'Affordable analytics • Self-service platform' },
+    { name: 'CloudScale Solutions', badges: ['PSG Ready'], whyMatched: 'F&B inventory specialist • Quick ROI' },
   ];
-
   const consultants = [
-    {
-      name: 'Carter Advisory',
-      badges: ['Top Match', 'High Success Rate'],
-      whyMatched: '92% win rate • 3 years F&B experience • EDG specialist'
-    },
-    {
-      name: 'Aegis Partners',
-      badges: ['Fast Turnaround'],
-      whyMatched: '14-day avg submission • Grant optimization expert • Local market knowledge'
-    }
+    { name: 'Carter Advisory', badges: ['Top Match', 'High Success Rate'], whyMatched: 'EDG specialist • 92% win rate' },
+    { name: 'Aegis Partners', badges: ['Fast Turnaround'], whyMatched: 'Fast claims • PSG/EDG coverage' },
+    { name: 'Strategic Insights', badges: ['Tech Strategy'], whyMatched: 'Digital strategy • Quick start' },
+    { name: 'InsightWorks Consulting', badges: ['Retail & Service'], whyMatched: 'Industry ops experience • 91% success rate' },
   ];
 
   const toggleVendor = (name: string) => {
@@ -185,12 +168,15 @@ export const Step5_PreviewAndDispatch: React.FC<Step5_PreviewAndDispatchProps> =
         </button>
         <button 
           onClick={handleDispatch}
-          disabled={selectedVendors.length === 0 && selectedConsultants.length === 0}
-          className="bg-indigo-600 text-white font-semibold px-8 py-3 rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 ml-auto disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:text-slate-500 dark:disabled:text-slate-500 disabled:cursor-not-allowed"
+          disabled={selectedVendors.length<3 || selectedConsultants.length<3}
+          className={"bg-indigo-600 text-white font-semibold px-8 py-3 rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 ml-auto "+(selectedVendors.length<3||selectedConsultants.length<3?' opacity-50 cursor-not-allowed':'')}
         >
           Dispatch Invitations
           <ArrowRight size={18} />
         </button>
+        {(selectedVendors.length<3 || selectedConsultants.length<3)&&(
+          <div className="text-red-500 mt-2 text-sm">Select at least 3 vendors and 3 consultants to proceed.</div>
+        )}
       </div>
     </div>
   );
