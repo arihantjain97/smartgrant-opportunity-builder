@@ -469,7 +469,7 @@ export const Step1_GoalCapture: React.FC<Step1_GoalCaptureProps> = ({ onNext, on
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                Continue → SmartAI Recommends
+                See Tailored Recommendations
                 <ArrowRight size={18} />
               </motion.button>
             )}
