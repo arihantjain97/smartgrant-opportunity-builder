@@ -3965,7 +3965,7 @@ File: features/opportunityBuilder/sme/Step1_GoalCapture.tsx
 [Step1_GoalCapture.tsx: start]
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Target, TrendingUp, Globe, Zap, Sparkles, CheckCircle, Megaphone, Activity } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Target, TrendingUp, Globe, Zap, Sparkles, Megaphone, Activity } from 'lucide-react';
 import { Card } from '../../../components/common/Card';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { ChatWindow } from '../../../components/coach/ChatWindow';
@@ -4320,10 +4320,7 @@ export const Step1_GoalCapture: React.FC<Step1_GoalCaptureProps> = ({ onNext, on
           {coachState.stage === "APPLIED" && (
             <Alert variant="success">
               <div className="flex items-center justify-between w-full">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="text-emerald-600" />
-                  Applied suggested improvement to your goal.
-                </div>
+                <span>Applied suggested improvement to your goal.</span>
                 <button
                   onClick={() => setShowChat(!showChat)}
                   className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
