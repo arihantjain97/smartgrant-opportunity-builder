@@ -3,9 +3,9 @@ import { TRHLSOption } from "../state/types";
 export const TRHLS_FOR_MARKETING_VISIBILITY: TRHLSOption[] = [
   {
     id: "psg-digital-ads-suite",
-    name: "PSG Digital Ads & CRM Suite",
+    name: "Digital Ads & CRM Launchpad",
     grantTag: "PSG",
-    whyFit: "The perfect launchpad for SMEs wanting not just more leads, but a hands-off, unified approach across digital channels. We’ll bring advanced yet easy-to-use tools for ads, CRM, and analytics—all PSG-grant optimized—so you focus on growth while we handle the campaign science.",
+    whyFit: "The perfect launchpad for SMEs wanting not just more leads, but a hands-off, unified approach across digital channels. We’ll bring advanced yet easy-to-use tools for ads, CRM, and analytics—so you focus on growth while we handle the campaign science.",
     estCostBand: [20000, 25000],
     estDurationMonths: [3, 4],
     businessImpact: {
@@ -19,7 +19,7 @@ export const TRHLS_FOR_MARKETING_VISIBILITY: TRHLSOption[] = [
   },
   {
     id: "edg-market-expansion-sea",
-    name: "EDG Market Expansion (SEA)",
+    name: "SEA Market Expansion Blueprint",
     grantTag: "EDG",
     whyFit: "Supports overseas marketing strategy for regional customer growth.",
     estCostBand: [40000, 60000],
@@ -35,7 +35,7 @@ export const TRHLS_FOR_MARKETING_VISIBILITY: TRHLSOption[] = [
   },
   {
     id: "edg-brand-refresh",
-    name: "EDG Brand Revamp & Content Campaign",
+    name: "Brand Revamp & Content Campaign",
     grantTag: "EDG",
     whyFit: "Improves brand positioning, storytelling and content funnel conversion.",
     estCostBand: [30000, 45000],
@@ -51,9 +51,9 @@ export const TRHLS_FOR_MARKETING_VISIBILITY: TRHLSOption[] = [
   },
   {
     id: "ads-sprint-nongrant",
-    name: "High Velocity Ads Sprint (Non-Grant)",
+    name: "High Velocity Ads Sprint",
     grantTag: "NON_GRANT",
-    whyFit: "Quick-start campaign to validate lead generation before full grant execution.",
+    whyFit: "Quick-start campaign to validate lead generation before committing to a full-scale rollout.",
     estCostBand: [12000, 18000],
     estDurationMonths: [1, 2],
     businessImpact: {
@@ -66,7 +66,7 @@ export const TRHLS_FOR_MARKETING_VISIBILITY: TRHLSOption[] = [
   },
   {
     id: "cro-web-refresh-nongrant",
-    name: "CRO + Website UX Refresh (Non-Grant)",
+    name: "CRO + Website UX Refresh",
     grantTag: "NON_GRANT",
     whyFit: "Revamps your website UX and analytics to improve conversion rate.",
     estCostBand: [15000, 20000],

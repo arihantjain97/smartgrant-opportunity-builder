@@ -2,8 +2,16 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, CheckCircle, TrendingUp, Users, DollarSign, Clock, ArrowRight } from 'lucide-react';
 import { TRHLSOption } from '../../../state/types';
-import { formatImpact, getGrantBadgeColor, getImpactColor } from '../../../state/trhls/impact';
+import { 
+  computeImpactWinners, 
+  findBestOverallSolutionId, 
+  formatImpact, 
+  getGrantBadgeColor, 
+  getImpactColor, 
+  MetricWinnerMap 
+} from '../../../state/trhls/impact';
 import { LeadResponse } from '../../../state/matching/types';
+import { buildSolutionSummary, clampSignals, derivePersonaLine, buildVerboseDescription } from './compareHelpers';
 
 interface CompareDrawerProps {
   isOpen: boolean;
@@ -12,41 +20,123 @@ interface CompareDrawerProps {
   onProceed: () => void;
 }
 
-const ImpactMetric: React.FC<{ 
+const metricOrder = [
+  {
+    key: 'revenueLiftPct' as const,
+    label: 'Revenue Lift',
+    icon: TrendingUp,
+    type: 'revenue' as const,
+    badge: 'Best Revenue Lift',
+    subLabel: 'Estimated lift over the next 6–12 months'
+  },
+  {
+    key: 'leadDeltaPerMonth' as const,
+    label: 'New Leads / mo',
+    icon: Users,
+    type: 'leads' as const,
+    badge: 'Most Leads Generated',
+    subLabel: 'Average net-new leads each month'
+  },
+  {
+    key: 'cacChangePct' as const,
+    label: 'CAC Change',
+    icon: DollarSign,
+    type: 'cac' as const,
+    badge: 'Best CAC Savings',
+    subLabel: 'Estimated change in acquisition cost'
+  },
+  {
+    key: 'timeToFirstLeadWeeks' as const,
+    label: 'Time to First Lead',
+    icon: Clock,
+    type: 'time' as const,
+    badge: 'Fastest to Leads',
+    subLabel: 'Weeks from kickoff to first lead'
+  }
+] as const;
+
+interface ImpactMetricProps { 
   label: string; 
   value: string; 
   icon: React.ElementType;
   color: string;
   index: number;
-}> = ({ label, value, icon: Icon, color, index }) => (
+  subLabel: string;
+  isWinner: boolean;
+  winnerBadge?: string;
+}
+
+const ImpactMetric: React.FC<ImpactMetricProps> = ({
+  label,
+  value,
+  icon: Icon,
+  color,
+  index,
+  subLabel,
+  isWinner,
+  winnerBadge
+}) => (
   <motion.div
     initial={{ opacity: 0, y: 10 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay: index * 0.1 }}
-    className="bg-white rounded-lg p-3 border border-slate-200"
+    className={`rounded-lg p-3 border transition-colors ${
+      isWinner ? 'border-indigo-300 bg-indigo-50/70 shadow-sm' : 'border-slate-200 bg-white'
+    }`}
   >
-    <div className="flex items-center gap-2 mb-1">
-      <Icon size={14} className={color} />
-      <span className="text-xs font-medium text-slate-600">{label}</span>
+    <div className="flex items-center justify-between gap-2 mb-2">
+      <div className="flex items-center gap-2">
+        <Icon size={14} className={isWinner ? 'text-indigo-500' : 'text-slate-400'} />
+        <span className="text-xs font-medium text-slate-600">{label}</span>
+      </div>
+      {isWinner && winnerBadge && (
+        <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-full uppercase tracking-wide">
+          {winnerBadge}
+        </span>
+      )}
     </div>
-    <div className={`text-lg font-bold ${color}`}>{value}</div>
+    <div className={`text-2xl font-semibold leading-tight ${color}`}>{value}</div>
+    <div className="text-[11px] text-slate-500 mt-1">{subLabel}</div>
   </motion.div>
 );
 
-const SolutionCard: React.FC<{ 
-  solution: TRHLSOption; 
+interface SolutionCardProps {
+  solution: TRHLSOption;
   index: number;
-}> = ({ solution, index }) => {
-  const impactMetrics = formatImpact(solution);
+  metricWinners: MetricWinnerMap;
+  showWinners: boolean;
+  overallBestId: string | null;
+}
+
+const SolutionCard: React.FC<SolutionCardProps> = ({ solution, index, metricWinners, showWinners, overallBestId }) => {
+  const impactMetrics = new Map(formatImpact(solution).map(metric => [metric.label, metric.value]));
   const grantBadgeColor = getGrantBadgeColor(solution.grantTag);
-  
+  const personaLine = derivePersonaLine(solution);
+  const description = buildVerboseDescription(solution);
+  const signals = clampSignals(solution.rationaleSignals);
+  const winningMetrics = new Set(
+    Object.values(metricWinners)
+      .filter(info => info.winnerIds.includes(solution.id))
+      .map(info => info.label)
+  );
+  const summaryBullets = buildSolutionSummary(solution, winningMetrics, overallBestId === solution.id);
+  const isRecommended = overallBestId === solution.id && showWinners;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1 }}
-      className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm"
+      className={`relative bg-white rounded-xl border ${
+        isRecommended ? 'border-indigo-300 shadow-lg' : 'border-slate-200 shadow-sm'
+      } p-6`}
     >
+      {isRecommended && (
+        <div className="absolute -top-3 right-6 bg-indigo-600 text-white text-xs font-semibold px-3 py-1 rounded-full shadow">
+          Recommended
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-4">
         <div className="flex items-start justify-between mb-2">
@@ -55,54 +145,55 @@ const SolutionCard: React.FC<{
             {solution.grantTag === 'NON_GRANT' ? 'Self-Funded' : solution.grantTag}
           </span>
         </div>
-        <p className="text-xs text-slate-600 mb-3">{solution.whyFit}</p>
+        {personaLine && (
+          <p className="text-xs font-semibold text-indigo-600 mb-1">{personaLine}</p>
+        )}
+        <p className="text-xs text-slate-600">{description}</p>
       </div>
 
       {/* Why Recommended */}
       <div className="mb-4">
-        <h4 className="text-xs font-medium text-slate-700 mb-2">Why you're seeing this:</h4>
+        <h4 className="text-xs font-medium text-slate-700 mb-2">Why you're seeing this</h4>
         <div className="flex flex-wrap gap-1">
-          {solution.rationaleSignals?.map((signal: string, idx: number) => (
+          {signals.map((signal: string, idx: number) => (
             <motion.span
               key={idx}
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2 + idx * 0.05 }}
-              className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-full"
+              className="px-2 py-1 bg-slate-100 text-slate-600 text-[11px] rounded-full"
             >
               {signal}
             </motion.span>
-          )) || []}
+          ))}
+          {signals.length === 0 && (
+            <span className="text-[11px] text-slate-400">Signals not available</span>
+          )}
         </div>
       </div>
 
       {/* Business Impact */}
       <div className="mb-4">
-        <h4 className="text-xs font-medium text-slate-700 mb-3">Business Impact:</h4>
-        <div className="grid grid-cols-2 gap-2">
-          {impactMetrics.map((metric, idx) => {
-            const iconMap = {
-              'Revenue Lift': TrendingUp,
-              'New Leads / mo': Users,
-              'CAC Change': DollarSign,
-              'Time to First Lead': Clock
-            };
-            const Icon = iconMap[metric.label as keyof typeof iconMap] || TrendingUp;
-            const color = getImpactColor(
-              parseFloat(metric.value.replace('%', '').replace(' wks', '')),
-              metric.label.includes('CAC') ? 'cac' : 
-              metric.label.includes('Time') ? 'time' :
-              metric.label.includes('Revenue') ? 'revenue' : 'leads'
-            );
-            
+        <h4 className="text-xs font-medium text-slate-700 mb-3">Business Impact</h4>
+        <div className="grid grid-cols-2 gap-3">
+          {metricOrder.map((metric, idx) => {
+            const displayValue = impactMetrics.get(metric.label) ?? '—';
+            const rawValue = solution.businessImpact[metric.key];
+            const hasValue = typeof rawValue === 'number' && !Number.isNaN(rawValue);
+            const color = hasValue ? getImpactColor(rawValue, metric.type) : 'text-slate-400';
+            const isWinner = showWinners && winningMetrics.has(metric.label) && hasValue;
+
             return (
               <ImpactMetric
                 key={metric.label}
                 label={metric.label}
-                value={metric.value}
-                icon={Icon}
+                value={displayValue}
+                icon={metric.icon}
                 color={color}
                 index={idx}
+                subLabel={metric.subLabel}
+                isWinner={isWinner}
+                winnerBadge={isWinner ? metric.badge : undefined}
               />
             );
           })}
@@ -111,17 +202,33 @@ const SolutionCard: React.FC<{
 
       {/* Grant Support */}
       {solution.grantTag !== 'NON_GRANT' && (
-        <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-          <h4 className="text-xs font-medium text-blue-800 mb-1">Grant Support:</h4>
+        <div className="bg-blue-50 rounded-lg p-3 border border-blue-200 mb-4">
+          <h4 className="text-xs font-medium text-blue-800 mb-1">Grant Support</h4>
           <p className="text-xs text-blue-700">{solution.grantWhy}</p>
         </div>
       )}
 
+      {/* Summary */}
+      <div className="bg-slate-50 rounded-lg p-3 border border-slate-200 mb-4">
+        <h4 className="text-xs font-semibold text-slate-700 mb-2">Best if you...</h4>
+        <ul className="list-disc list-inside space-y-1">
+          {summaryBullets.map((bullet, idx) => (
+            <li key={idx} className="text-[11px] text-slate-600 leading-snug">
+              {bullet}
+            </li>
+          ))}
+        </ul>
+      </div>
+
       {/* Cost & Duration */}
       <div className="mt-4 pt-3 border-t border-slate-200">
         <div className="flex justify-between text-xs text-slate-600">
-          <span>Cost: S${solution.estCostBand[0].toLocaleString()} - S${solution.estCostBand[1].toLocaleString()}</span>
-          <span>Duration: {solution.estDurationMonths[0]}-{solution.estDurationMonths[1]} months</span>
+          <span>
+            Cost: S${solution.estCostBand[0].toLocaleString()} - S${solution.estCostBand[1].toLocaleString()}
+          </span>
+          <span>
+            Duration: {solution.estDurationMonths[0]}-{solution.estDurationMonths[1]} months
+          </span>
         </div>
       </div>
     </motion.div>
@@ -134,6 +241,11 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
   selected, 
   onProceed 
 }) => {
+  const metricWinners = React.useMemo(() => computeImpactWinners(selected), [selected]);
+  const overallBestId = React.useMemo(() => findBestOverallSolutionId(selected), [selected]);
+  const hasCompetition = selected.length > 1;
+  const showWinners = hasCompetition && Object.keys(metricWinners).length > 0;
+
   const getGridCols = () => {
     if (selected.length === 1) return 'grid-cols-1';
     if (selected.length === 2) return 'grid-cols-1 md:grid-cols-2';
@@ -187,6 +299,9 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
                     key={solution.id}
                     solution={solution}
                     index={index}
+                    metricWinners={metricWinners}
+                    showWinners={showWinners}
+                    overallBestId={overallBestId}
                   />
                 ))}
               </div>
@@ -197,7 +312,9 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-sm text-slate-600">
                   <CheckCircle size={16} className="text-emerald-600" />
-                  <span>Ready to proceed with selected solutions</span>
+                  <span>
+                    You've selected {selected.length} solution{selected.length !== 1 ? 's' : ''}. Choose the one that best matches how you want to grow.
+                  </span>
                 </div>
                 <motion.button
                   onClick={onProceed}

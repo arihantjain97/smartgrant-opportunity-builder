@@ -25,6 +25,7 @@ export interface TRHLSOption {
   name: string;                 // e.g., "Cloud ERP Implementation"
   grantTag: 'PSG' | 'EDG' | 'NON_GRANT';
   whyFit: string;               // explainable text
+  personaTagline?: string;      // optional short persona cue
   estCostBand: [number, number];
   estDurationMonths: [number, number];
   businessImpact: { 

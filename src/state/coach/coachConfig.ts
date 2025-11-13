@@ -16,7 +16,7 @@ export const COACH_CONFIG = {
   suggestionTemplates: {
     GROWTH: {
       coachLine: "Absolutely understood — let's zero in on boosting your brand's online presence and simplifying your campaign reporting.",
-      text: "At its heart, your goal is to ensure your brand stands out online, attracting more customers while making campaign tracking far less of a headache. We understand you’re striving for not just increased digital visibility, but also a way to see what’s working in your campaigns — across every platform, all in one place. Our priority is to empower your team with clearer insights and simpler reporting, freeing up your time to focus on actual growth.",
+      text: "\"We're struggling to attract new customers due to low online visibility. We want to improve our reach through digital marketing (SEO/ads) and website improvements.\"",
       rationale: "This approach enables a holistic match to marketing partners who not only drive lead generation, but also take pride in transparent, data-driven campaign outcomes."
     }
   },
